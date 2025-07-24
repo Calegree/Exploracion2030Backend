@@ -1,0 +1,11 @@
+# Entorno virtual
+.venv/
+venv/
+
+# Archivos de modelos y datos grandes
+*.h5
+*.hdf5
+*.ckpt
+
+# Otros
+.env
