@@ -9,7 +9,10 @@ import os
 
 # Carga el modelo una sola vez
 MODEL_PATH = os.path.join("model", "model_morchella.h5")
-model = load_model(MODEL_PATH)
+if os.path.exists(MODEL_PATH):
+    model = load_model(MODEL_PATH)
+else:
+    model = None
 
 class Prediction(Resource):
     def post(self):
