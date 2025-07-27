@@ -1,0 +1,29 @@
+summary: Clasificar imagen de hongo (Morchella vs No Morchella)
+description: Este endpoint recibe una imagen y predice si es un hongo del género Morchella.
+tags:
+  - Consumo de modelo
+consumes:
+  - multipart/form-data
+parameters:
+  - name: imagen
+    in: formData
+    type: file
+    required: true
+    description: Imagen del hongo a clasificar (formato JPG o PNG)
+responses:
+  200:
+    description: Resultado de la predicción
+    schema:
+      type: object
+      properties:
+        resultado:
+          type: string
+          example: Es morchella
+        confianza:
+          type: number
+          format: float
+          example: 0.913
+  400:
+    description: Imagen no enviada
+  500:
+    description: Error interno en el servidor

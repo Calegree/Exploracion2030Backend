@@ -1,0 +1,48 @@
+summary: Descargar imágenes de hongos
+description: |
+  Este endpoint descarga imágenes de hongos desde la API de iNaturalist y las guarda automáticamente 
+  en las carpetas correspondientes del dataset:
+  
+  - **morchella/**: Imágenes de especies de Morchella (Morchella tridentina)
+  - **no_morchella/**: Imágenes de otras especies de hongos (Gyromitra, Laccaria, Cortinarius, etc.)
+  
+  El endpoint descarga automáticamente:
+  - 100 imágenes de Morchella tridentina
+  - 20 imágenes de cada especie no-Morchella (Gyromitra antarctica, Laccaria, Cortinarius, Clitocybe, Galerina)
+  
+  Las imágenes se guardan con nombres únicos basados en la especie y se descargan en alta resolución.
+tags:
+  - Dataset
+consumes:
+  - application/json
+produces:
+  - application/json
+parameters: []
+responses:
+  200:
+    description: Imágenes descargadas correctamente
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Descarga completada"
+    examples:
+      application/json:
+        message: "Descarga completada"
+  400:
+    description: Error al descargar imágenes (problema con la API de iNaturalist o parámetros inválidos)
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error al conectar con iNaturalist API"
+  500:
+    description: Error interno en el servidor
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error interno del servidor"

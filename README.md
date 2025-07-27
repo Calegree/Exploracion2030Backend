@@ -8,7 +8,7 @@ py -3 -m venv .venv
 pip install Flask
 
 #Dependencias
-pip install flask flask-restful tensorflow pillow
+pip install flask flask-restful requests tensorflow pillow
 
 
 
