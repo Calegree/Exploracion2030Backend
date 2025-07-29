@@ -7,5 +7,10 @@ venv/
 *.hdf5
 *.ckpt
 
+# Dataset con imágenes
+src/dataset/
+dataset/
+
+
 # Otros
 .env
