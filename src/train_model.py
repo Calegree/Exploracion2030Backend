@@ -14,6 +14,33 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from PIL import Image
 import glob
+import sqlite3
+from datetime import datetime
+
+# Configuración mejorada de MLflow para SQLite
+def setup_mlflow():
+    """
+    Configura MLflow para usar SQLite como backend
+    """
+    # Configurar tracking URI para SQLite
+    tracking_uri = "sqlite:///mlflow.db"
+    mlflow.set_tracking_uri(tracking_uri)
+    
+    # Crear experimento si no existe
+    experiment_name = "morchella_detection"
+    try:
+        experiment = mlflow.get_experiment_by_name(experiment_name)
+        if experiment is None:
+            mlflow.create_experiment(experiment_name)
+            print(f"✅ Experimento '{experiment_name}' creado")
+        else:
+            print(f"✅ Experimento '{experiment_name}' encontrado")
+    except Exception as e:
+        print(f"⚠️ Error configurando experimento: {e}")
+    
+    mlflow.set_experiment(experiment_name)
+    return tracking_uri
+
 #Este comando: cd src
 #python train_model.py
 
@@ -24,8 +51,7 @@ import glob
 #Registrará todo en MLflow
 
 # Configurar MLflow
-mlflow.set_tracking_uri("sqlite:///mlflow.db")
-mlflow.set_experiment("morchella_detection")
+# setup_mlflow() # Moved to top
 
 def load_and_preprocess_data(dataset_path, img_size=(224, 224)):
     """
@@ -133,16 +159,24 @@ def train_model():
     """
     Función principal de entrenamiento con MLflow
     """
+    # Configurar MLflow
+    print("🔧 Configurando MLflow...")
+    tracking_uri = setup_mlflow()
+    print(f"📊 Tracking URI: {tracking_uri}")
+    
     # Parámetros del experimento
     params = {
         'img_size': 224,
         'batch_size': 32,
         'epochs': 20,
         'learning_rate': 0.001,
-        'dropout_rate': 0.5
+        'dropout_rate': 0.5,
+        'model_type': 'MobileNetV2',
+        'transfer_learning': True,
+        'data_augmentation': True
     }
     
-    with mlflow.start_run():
+    with mlflow.start_run(run_name=f"morchella_training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
         # Log de parámetros
         mlflow.log_params(params)
         
@@ -192,6 +226,7 @@ def train_model():
             validation_data=(X_val, y_val),
             callbacks=[
                 #accuracy (%) = predicciones exitosas / total de predicciones
+                #el modelo debe tener una accuracy del 70% para ser buena, 80% para muy buena y 90% excelente
                 #para el entrenamiento pero minimo ten 5 epochs sin mejora de accuracy antes de parar
                 tf.keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
                 #reduce el aprendizaje del modelo si pasan 3 epochs sin mejora de accuracy
@@ -209,6 +244,7 @@ def train_model():
         mlflow.log_metric("val_loss", val_loss)
         
         # Reporte de clasificación
+        # genera una matriz de confusion con precision recall y f1-score 
         report = classification_report(y_val, y_pred, target_names=['No Morchella', 'Morchella'])
         print("\n📋 Reporte de Clasificación:")
         print(report)
@@ -232,8 +268,18 @@ def train_model():
         # Log del modelo en MLflow
         mlflow.keras.log_model(model, "model")
         
+        # Log de información adicional
+        mlflow.log_metric("final_accuracy", val_accuracy)
+        mlflow.log_metric("final_loss", val_loss)
+        mlflow.set_tag("model_type", "MobileNetV2")
+        mlflow.set_tag("task", "binary_classification")
+        mlflow.set_tag("dataset_size", len(X))
+        
         print(f"✅ Modelo guardado en: {model_path}")
         print(f"📊 Accuracy de validación: {val_accuracy:.4f}")
+        print(f"📊 Loss de validación: {val_loss:.4f}")
+        print(f"🔗 Run ID: {mlflow.active_run().info.run_id}")
+        print(f"📈 Ver resultados en: mlflow ui")
         
         return model, history
 
