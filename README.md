@@ -1,3 +1,12 @@
+#Hongos Reconocidos
+Morchella rufobrunnea
+Morchella andinensis
+Morchella tridentina
+Morchella Aysenina
+
+#Documentación
+http://localhost:5000/apidocs/#/
+
 #Crear enviroment proyecto Python
 py -3 -m venv .venv
 
@@ -19,5 +28,10 @@ python verify_mlflow_setup.py
 python train_model.py
 python start_mlflow_ui.py
 
+#
+python setup_model_for_prediction.py
+python app.py
+curl http://localhost:5000/predict
+curl -X POST -F "imagen=@tu_imagen.jpg" http://localhost:5000/predict
 
 
