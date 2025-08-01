@@ -6,11 +6,23 @@ venv/
 *.h5
 *.hdf5
 *.ckpt
+*.pkl
+*.joblib
+*.pb
+*.onnx
 
 # Dataset con imágenes
 src/dataset/
 dataset/
 
+# Modelos específicos
+src/model/
+model/
+
+# MLflow
+mlruns/
+mlflow.db
+mlflow.db-journal
 
 # Otros
 .env
