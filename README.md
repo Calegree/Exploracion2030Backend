@@ -16,12 +16,12 @@ py -3 -m venv .venv
 #Dependencias
 pip install -r requirements.txt
 
-#Actualizar dependencias
-pip freeze >> requirements.txt
 
 #Correr la API para hacer predicciones
 python src/app.py
 
+#Actualizar dependencias
+pip freeze >> requirements.txt
 
 #Corre el pipeline para crear el modelo
 python run_training_pipeline.py
