@@ -19,7 +19,11 @@ pip install -r requirements.txt
 #Actualizar dependencias
 pip freeze >> requirements.txt
 
-#Corre el pipeline
+#Correr la API para hacer predicciones
+python src/app.py
+
+
+#Corre el pipeline para crear el modelo
 python run_training_pipeline.py
 
 #O hazlo manual
