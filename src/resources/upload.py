@@ -48,7 +48,7 @@ def upload_model():
 
 
 @upload_api.route('/upload/models', methods=['GET'])
-@swag_from(yaml.safe_load(open(os.path.join(YML_DIR, 'upload_models.yml'), 'r', encoding='utf-8')))
+@swag_from(os.path.join(YML_DIR, 'upload_models.yml'))
 def list_models():
     files = sorted(os.listdir(MODELS_DIR))
     return jsonify({'models': files})
@@ -71,7 +71,7 @@ def activate_model():
 
 
 @upload_api.route('/upload/active', methods=['GET'])
-@swag_from(yaml.safe_load(open(os.path.join(YML_DIR, 'upload_active.yml'), 'r', encoding='utf-8')))
+@swag_from(os.path.join(YML_DIR, 'upload_active.yml'))
 def active_model():
     info = _load_model_info()
     return jsonify({'active_model': info.get('active_model')})
