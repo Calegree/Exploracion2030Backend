@@ -1,0 +1,17 @@
+post:
+  tags:
+    - upload
+  summary: Subir un archivo de modelo
+  consumes:
+    - multipart/form-data
+  parameters:
+    - name: model
+      in: formData
+      type: file
+      required: true
+      description: Archivo del modelo (p. ej. .h5)
+  responses:
+    "201":
+      description: Archivo subido
+    "400":
+      description: Error en la petición

@@ -1,0 +1,24 @@
+get:
+  tags:
+    - mlflow
+  summary: Listar runs en MLflow
+  description: "Devuelve la lista de runs encontradas en MLflow (información básica: run_id, start_time, metrics)."
+  parameters: []
+  responses:
+    "200":
+      description: Lista de runs
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            run_id:
+              type: string
+              example: "abcd1234"
+            start_time:
+              type: string
+              example: "2024-01-01T12:00:00"
+            metrics:
+              type: object
+              additionalProperties:
+                type: number

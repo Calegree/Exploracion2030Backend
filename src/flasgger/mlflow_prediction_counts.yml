@@ -1,0 +1,17 @@
+get:
+  tags:
+    - dashboard
+  summary: Obtener contador de predicciones (Morchella / No Morchella)
+  description: Devuelve el número de predicciones acumuladas por clase según `model_info.json`.
+  responses:
+    "200":
+      description: Objeto con los contadores de predicciones
+      schema:
+        type: object
+        properties:
+          morchella:
+            type: integer
+            example: 123
+          no_morchella:
+            type: integer
+            example: 45

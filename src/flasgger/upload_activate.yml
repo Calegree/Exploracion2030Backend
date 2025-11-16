@@ -1,0 +1,23 @@
+post:
+  tags:
+    - upload
+  summary: Activar un modelo
+  consumes:
+    - application/json
+  parameters:
+    - name: body
+      in: body
+      required: true
+      schema:
+        type: object
+        properties:
+          model:
+            type: string
+            description: Nombre del archivo a activar
+  responses:
+    "200":
+      description: Modelo activado
+    "400":
+      description: Petición inválida
+    "404":
+      description: Modelo no encontrado

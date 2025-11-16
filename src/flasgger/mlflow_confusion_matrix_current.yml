@@ -1,0 +1,35 @@
+get:
+  tags:
+    - mlflow
+  summary: Matriz de confusión del modelo activo
+  description: Devuelve la matriz de confusión del modelo actualmente activado. Si el modelo activo es un run de MLflow, devuelve la matriz asociada a ese run; si es un modelo local subido, intenta leer `confusion_matrix.json` junto al archivo .h5.
+  responses:
+    "200":
+      description: Matriz de confusión o contadores de predicción
+      schema:
+        type: object
+        properties:
+          confusion_matrix:
+            type: array
+            items:
+              type: array
+              items:
+                type: integer
+            example: [[50, 5], [3, 42]]
+          prediction_counts:
+            type: object
+            properties:
+              morchella:
+                type: integer
+                example: 123
+              no_morchella:
+                type: integer
+                example: 45
+    "404":
+      description: No se encontró información relevante
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "No confusion matrix or counts available"

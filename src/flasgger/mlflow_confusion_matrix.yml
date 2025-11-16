@@ -1,0 +1,33 @@
+get:
+  tags:
+    - mlflow
+  summary: Obtener matriz de confusión de un run de MLflow
+  description: |
+    Descarga y devuelve la matriz de confusión (JSON) asociada a un run de MLflow.
+  parameters:
+    - name: run_id
+      in: path
+      required: true
+      type: string
+      description: ID del run de MLflow
+  responses:
+    "200":
+      description: Matriz de confusión en formato JSON
+      schema:
+        type: object
+        properties:
+          confusion_matrix:
+            type: array
+            items:
+              type: array
+              items:
+                type: integer
+            example: [[50, 5], [3, 42]]
+    "404":
+      description: No existe la matriz para el run solicitado
+      schema:
+        type: object
+        properties:
+          error:
+            type: string
+            example: "confusion_matrix.json not found"

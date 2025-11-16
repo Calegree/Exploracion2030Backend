@@ -9,6 +9,8 @@ import os
 import mlflow
 from flasgger import swag_from
 import sys
+import json
+from datetime import datetime
 
 # Agregar el directorio padre al path para importar mlflow_manager
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -17,6 +19,33 @@ from mlflow_manager import MLflowManager
 # Configurar MLflow
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 
+MODEL_INFO_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'model_info.json'))
+
+def _read_model_info():
+    try:
+        with open(MODEL_INFO_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _write_model_info(data):
+    try:
+        with open(MODEL_INFO_PATH, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"⚠️ Error escribiendo model_info.json: {e}")
+
+def _increment_prediction_count(is_morchella: bool):
+    info = _read_model_info()
+    counts = info.get('prediction_counts', {'morchella': 0, 'no_morchella': 0})
+    if is_morchella:
+        counts['morchella'] = int(counts.get('morchella', 0)) + 1
+    else:
+        counts['no_morchella'] = int(counts.get('no_morchella', 0)) + 1
+    info['prediction_counts'] = counts
+    info['prediction_counts_last_updated'] = datetime.utcnow().isoformat()
+    _write_model_info(info)
+
 class Prediction(Resource):
     def __init__(self):
         self.model = None
@@ -24,12 +53,42 @@ class Prediction(Resource):
         self.model_info = None
         self.load_model()
     
+    def _persist_model_info(self):
+        """Merge y persiste información del modelo activo en model_info.json sin sobrescribir contadores."""
+        try:
+            current = _read_model_info()
+            if isinstance(self.model_info, dict):
+                # merge
+                current.update(self.model_info)
+                # mantener claves esperadas por otros módulos
+                if 'path' in self.model_info and self.model_info.get('source', '').startswith('local'):
+                    current['local_model_path'] = self.model_info['path']
+                if 'run_id' in self.model_info:
+                    current['run_id'] = self.model_info['run_id']
+            _write_model_info(current)
+        except Exception as e:
+            print(f"⚠️ Error persistiendo model_info: {e}")
+    
     def load_model(self):
         """
-        Carga el modelo desde MLflow con múltiples estrategias de fallback
+        Carga el modelo desde MLflow con múltiples estrategias de fallback.
+        Prioriza un modelo local activado por upload (model_info.json).
         """
-        print("🔍 Cargando modelo desde MLflow...")
-        
+        print("🔍 Cargando modelo (priorizando modelo local activado si existe)...")
+
+        # Intentar primero modelo local activado por upload (más prioridad)
+        try:
+            info = _read_model_info()
+            local_path = info.get('local_model_path')
+            if local_path and os.path.exists(local_path):
+                self.model = load_model(local_path)
+                self.model_info = {'source': 'local_uploaded', 'path': local_path}
+                self._persist_model_info()
+                print("✅ Modelo cargado desde modelo subido (local_uploaded)")
+                return
+        except Exception as e:
+            print(f"⚠️ Error cargando modelo local activado: {e}")
+
         # Estrategia 1: Intentar cargar el mejor modelo registrado
         try:
             best_run = self.mlflow_manager.get_best_run()
@@ -43,6 +102,7 @@ class Prediction(Resource):
                     'accuracy': best_run.get('metrics.val_accuracy', 'N/A'),
                     'loss': best_run.get('metrics.val_loss', 'N/A')
                 }
+                self._persist_model_info()
                 print(f"✅ Modelo cargado desde MLflow (mejor run: {run_id[:8]}...)")
                 print(f"   Accuracy: {self.model_info['accuracy']}")
                 return
@@ -63,6 +123,7 @@ class Prediction(Resource):
                     'accuracy': latest_run.get('metrics.val_accuracy', 'N/A'),
                     'loss': latest_run.get('metrics.val_loss', 'N/A')
                 }
+                self._persist_model_info()
                 print(f"✅ Modelo cargado desde MLflow (último run: {run_id[:8]}...)")
                 print(f"   Accuracy: {self.model_info['accuracy']}")
                 return
@@ -76,12 +137,13 @@ class Prediction(Resource):
                 'source': 'mlflow_registered_model',
                 'model_name': 'morchella_model'
             }
+            self._persist_model_info()
             print("✅ Modelo cargado desde MLflow (modelo registrado)")
             return
         except Exception as e:
             print(f"⚠️ Error cargando modelo registrado: {e}")
         
-        # Estrategia 4: Fallback a archivo local
+        # Estrategia 4: Fallback a archivo local en repo
         try:
             model_path = os.path.join(os.path.dirname(__file__), '..', 'model', 'model_morchella.h5')
             if os.path.exists(model_path):
@@ -90,6 +152,7 @@ class Prediction(Resource):
                     'source': 'local_file',
                     'path': model_path
                 }
+                self._persist_model_info()
                 print("✅ Modelo cargado desde archivo local")
                 return
             else:
@@ -168,6 +231,12 @@ class Prediction(Resource):
                     mlflow.log_param("input_filename", archivo.filename)
             except Exception as e:
                 print(f"⚠️ No se pudo loggear en MLflow: {e}")
+
+            # actualizar contadores locales persistentes
+            try:
+                _increment_prediction_count(es_morchella)
+            except Exception as e:
+                print(f"⚠️ No se pudo actualizar conteo de predicciones: {e}")
 
             return {
                 'resultado': resultado,

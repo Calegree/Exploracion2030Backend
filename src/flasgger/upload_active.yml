@@ -1,0 +1,12 @@
+get:
+  tags:
+    - upload
+  summary: Obtener modelo activo
+  responses:
+    "200":
+      description: Modelo activo
+      schema:
+        type: object
+        properties:
+          active_model:
+            type: string
