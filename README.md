@@ -57,12 +57,19 @@ curl -X POST -F "imagen=@tu_imagen.jpg" http://localhost:5000/predict
 
 
 
-para correr la app en linux 
+para correr la api en linux 
 ##crea el env
 python3 -m venv .venv
 ##corre el env y la app
 source .venv/bin/activate
-python3 src/app.py
+python -m src.app
+
+para correr MLFlow UI en el puerto 5001
+
+python -m mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
+
+
+pip install -r src/requirements-linux.txt
 
 pip install -r src/requirements.txt
 

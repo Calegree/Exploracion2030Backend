@@ -19,15 +19,16 @@ def start_mlflow_ui():
         return False
     
     # Configurar el comando para iniciar MLflow UI
+    port = int(os.getenv('MLFLOW_PORT', '5001'))
     cmd = [
         sys.executable, "-m", "mlflow", "ui",
         "--backend-store-uri", "sqlite:///mlflow.db",
         "--host", "0.0.0.0",
-        "--port", "5000"
+        "--port", str(port)
     ]
     
     print(f"📊 Comando: {' '.join(cmd)}")
-    print("🌐 URL: http://localhost:5000")
+    print(f"🌐 URL: http://localhost:{port}")
     print("⏳ Iniciando servidor...")
     
     try:
@@ -45,21 +46,20 @@ def start_mlflow_ui():
         # Verificar si el proceso sigue ejecutándose
         if process.poll() is None:
             print("✅ Servidor MLflow iniciado correctamente")
-            print("🌐 Abriendo navegador en 5 segundos...")
+            print(f"🌐 Abriendo navegador en 5 segundos en http://localhost:{port}...")
             
-            # Abrir navegador después de 5 segundos
             def open_browser():
                 try:
-                    webbrowser.open("http://localhost:5000")
+                    webbrowser.open(f"http://localhost:{port}")
                     print("✅ Navegador abierto")
                 except Exception as e:
                     print(f"⚠️ No se pudo abrir el navegador: {e}")
-                    print("   Abre manualmente: http://localhost:5000")
+                    print(f"   Abre manualmente: http://localhost:{port}")
             
             Timer(5.0, open_browser).start()
             
             print("\n📝 Información del servidor:")
-            print("   - URL: http://localhost:5000")
+            print(f"   - URL: http://localhost:{port}")
             print("   - Base de datos: mlflow.db")
             print("   - Para detener: Ctrl+C")
             
@@ -97,6 +97,18 @@ def check_mlflow_installation():
         print("   Instala con: pip install mlflow")
         return False
 
+def main():
+    port = int(os.getenv('MLFLOW_PORT', '5001'))
+    cmd = [
+        sys.executable, '-m', 'mlflow', 'ui',
+        '--backend-store-uri', 'sqlite:///mlflow.db',
+        '--host', '0.0.0.0',
+        '--port', str(port)
+    ]
+    print("📊 Comando:", " ".join(cmd))
+    subprocess.Popen(cmd)
+    webbrowser.open(f"http://localhost:{port}")
+
 if __name__ == "__main__":
     print("🔍 Verificando instalación...")
     
@@ -104,4 +116,4 @@ if __name__ == "__main__":
         start_mlflow_ui()
     else:
         print("❌ No se puede iniciar MLflow UI")
-        sys.exit(1) 
+        sys.exit(1)

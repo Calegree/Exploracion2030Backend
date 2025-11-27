@@ -74,6 +74,7 @@ class MLflowManager:
         if best_run is not None:
             model_info = {
                 "run_id": best_run["run_id"],
+                "active_run_id": best_run["run_id"],   # <-- clave añadida
                 "experiment_id": best_run["experiment_id"],
                 "start_time": best_run["start_time"].isoformat(),
                 "end_time": best_run["end_time"].isoformat(),
@@ -129,4 +130,4 @@ def main():
         manager.export_model_info()
 
 if __name__ == "__main__":
-    main() 
+    main()

@@ -4,11 +4,12 @@ Script principal para entrenar el modelo de Morchella con MLflow
 Este script automatiza todo el proceso de entrenamiento y configuración
 """
 
+from pathlib import Path
 import os
 import sys
 import subprocess
 import time
-from pathlib import Path
+import argparse
 
 def print_header(title):
     """Imprime un encabezado formateado"""
@@ -91,13 +92,16 @@ def check_dataset():
     
     return True
 
-def setup_mlflow():
+def setup_mlflow(no_clean=False):
     """Configura MLflow"""
     print_step(2, "Configurando MLflow")
     
     # Limpiar configuración anterior
-    if not run_script("clean_mlflow.py", "Limpiando configuración anterior de MLflow"):
-        return False
+    if not no_clean:
+        if not run_script("clean_mlflow.py", "Limpiando configuración anterior de MLflow"):
+            return False
+    else:
+        print("⚠️ Omisión de limpieza de MLflow (--no-clean). Se conservarán runs previos.")
     
     # Verificar configuración
     if not run_script("verify_mlflow_setup.py", "Verificando configuración de MLflow"):
@@ -136,6 +140,10 @@ def start_ui():
 
 def main():
     """Función principal"""
+    parser = argparse.ArgumentParser(description="Pipeline de entrenamiento Morchella")
+    parser.add_argument("--no-clean", action="store_true", help="No limpiar configuración anterior de MLflow")
+    args = parser.parse_args()
+
     print_header("PIPELINE DE ENTRENAMIENTO - MORCHELLA DETECTION")
     
     print("Este script te guiará a través de todo el proceso de entrenamiento")
@@ -154,7 +162,7 @@ def main():
         return
     
     # Paso 2: Configurar MLflow
-    if not setup_mlflow():
+    if not setup_mlflow(no_clean=args.no_clean):
         print("\n❌ Error en la configuración de MLflow")
         return
     
@@ -180,4 +188,4 @@ def main():
         print("\n\n👋 ¡Hasta luego!")
 
 if __name__ == "__main__":
-    main() 
+    main()

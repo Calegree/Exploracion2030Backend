@@ -1,17 +1,30 @@
+---
 post:
   tags:
     - upload
-  summary: Subir un archivo de modelo
+  summary: Subir un modelo (.h5)
+  description: Subir archivo del modelo y activarlo
   consumes:
     - multipart/form-data
   parameters:
     - name: model
       in: formData
-      type: file
-      required: true
       description: Archivo del modelo (p. ej. .h5)
+      required: true
+      type: file
   responses:
-    "201":
-      description: Archivo subido
-    "400":
-      description: Error en la petición
+    201:
+      description: Modelo subido
+      schema:
+        type: object
+        properties:
+          filename:
+            type: string
+          size:
+            type: integer
+          uploaded_at:
+            type: string
+    400:
+      description: Parámetros inválidos
+    500:
+      description: Error interno

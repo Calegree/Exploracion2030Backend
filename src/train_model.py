@@ -259,6 +259,17 @@ def train_model():
         # Graficar matriz de confusión
         cm_fig = plot_confusion_matrix(y_val, y_pred)
         mlflow.log_figure(cm_fig, "confusion_matrix.png")
+
+        # <-- Añadir: guardar matriz de confusion como JSON y subirla como artifact
+        try:
+            import json
+            cm = confusion_matrix(y_val, y_pred).tolist()
+            cm_json_path = os.path.join(os.path.dirname(__file__), 'model', 'confusion_matrix.json')
+            with open(cm_json_path, 'w', encoding='utf-8') as fh:
+                json.dump({'confusion_matrix': cm}, fh)
+            mlflow.log_artifact(cm_json_path, artifact_path="confusion_matrix")
+        except Exception as e:
+            print(f"⚠️ No se pudo guardar/loggear confusion_matrix.json: {e}")
         
         # Guardar modelo
         model_path = os.path.join(os.path.dirname(__file__), 'model', 'model_morchella.h5')
@@ -284,4 +295,4 @@ def train_model():
         return model, history
 
 if __name__ == "__main__":
-    train_model() 
+    train_model()

@@ -1,37 +1,34 @@
+from dotenv import load_dotenv
 from flask import Flask
 from flask_restful import Api
 from flasgger import Swagger
-import os
+from flask_cors import CORS
 from flask import request
-try:
-    from resources.prediction import Prediction
-except Exception as _e:
-    # Si falla la importación (por ejemplo TensorFlow no disponible en el entorno),
-    # registramos un recurso placeholder para que la app arranque y Flasgger
-    # pueda generar la especificación sin importar módulos pesados.
-    from flask_restful import Resource
+import os
 
-    class Prediction(Resource):
-        def get(self):
-            return {'error': 'Prediction endpoint unavailable (import error)'}, 503
+# cargar .env
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-        def post(self):
-            return {'error': 'Prediction endpoint unavailable (import error)'}, 503
-
-try:
-    from resources.download_fungis import DownloadImages
-except Exception:
-    from flask_restful import Resource
-
-    class DownloadImages(Resource):
-        def get(self):
-            return {'error': 'DownloadImages endpoint unavailable (import error)'}, 503
-
-from resources.upload import upload_api
-from resources.mlflow_dashboard import dashboard_api
+from .extensions import db
+# importar modelos para que SQLAlchemy los registre
+from . import models  # noqa: F401
 
 app = Flask(__name__)
+
+# configurar DB (usar env var DATABASE_URL)
+app.config.setdefault('SQLALCHEMY_DATABASE_URI', os.getenv('DATABASE_URL', 'sqlite:///./model_info.db'))
+app.config.setdefault('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+
+db.init_app(app)
+
+# crear tablas automáticamente al iniciar la app (solo en desarrollo)
+with app.app_context():
+    db.create_all()
+
+# configurar API, Swagger, CORS, blueprints, etc.
 api = Api(app)
+#swagger = Swagger(app)
+CORS(app)
 
 # Asegurar que no haya valores None en la configuración de SWAGGER
 app.config.setdefault('SWAGGER', {})
@@ -44,10 +41,16 @@ app.config['SWAGGER'].setdefault('openapi', '3.0.2')
 app.config['SWAGGER'].setdefault('auth', {})
 
 # Registrar la API RESTful (resources) y blueprints ANTES de instanciar Swagger
-api.add_resource(Prediction, '/predict')
-api.add_resource(DownloadImages, '/download/fungis')  # <-- registrar resource faltante
+from .resources.prediction import Prediction
+from .resources.download_fungis import DownloadImages
+from .resources.upload import upload_api
+from .resources.mlflow_dashboard import dashboard_api
 
-# Registrar blueprints
+# Resources (Flask-RESTful)
+api.add_resource(Prediction, '/predict')
+api.add_resource(DownloadImages, '/download/fungis')
+
+# Blueprints (Flask)
 app.register_blueprint(upload_api)
 app.register_blueprint(dashboard_api)
 
@@ -126,5 +129,5 @@ except Exception:
         return response
 
 if __name__ == "__main__":
-    # Run without the reloader/debugger to avoid double-imports and noisy TensorFlow
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # Ejecuta la API Flask en el puerto 5000 (usa FLASK_PORT si quieres cambiarlo)
+    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', '5000')), debug=False, use_reloader=False)
