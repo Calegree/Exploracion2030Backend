@@ -55,6 +55,16 @@ python app.py
 curl http://localhost:5000/predict
 curl -X POST -F "imagen=@tu_imagen.jpg" http://localhost:5000/predict
 
+tener instalado python 3.10 
+para correr la api en windows 
+##crea el env
+py -3.10 -m venv .venv310
+##corre el env y la app
+.venv\Scripts\activate 
+##instala las dependencias (como npm i pero python)
+python -m pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+
 
 
 para correr la api en linux 
@@ -62,6 +72,9 @@ para correr la api en linux
 python3 -m venv .venv
 ##corre el env y la app
 source .venv/bin/activate
+##instala las depedencias (npm i pero python)
+python -m pip install -r requirements.txt
+pip install -r requirements.txt
 python -m src.app
 
 para correr MLFlow UI en el puerto 5001

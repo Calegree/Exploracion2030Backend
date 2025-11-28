@@ -1,0 +1,4 @@
+# Use root requirements.txt as canonical source
+-r requirements.txt
+# Windows specific extras
+pywin32==311
