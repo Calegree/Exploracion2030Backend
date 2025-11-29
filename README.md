@@ -82,6 +82,14 @@ para correr MLFlow UI en el puerto 5001
 python -m mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
 
 
+##Para ver cual es la URI actual que conecta mlflow con la api
+echo $MLFLOW_TRACKING_URI
+##Para regular la URI que conecta mlflow con la api 
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5001
+
+
+
+
 pip install -r src/requirements-linux.txt
 
 pip install -r src/requirements.txt

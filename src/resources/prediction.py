@@ -64,11 +64,19 @@ class Prediction(Resource):
         """
         if 'imagen' not in request.files:
             return {'error': 'campo "imagen" no enviado'}, 400
-        img_file = request.files['imagen']
+        archivo = request.files['imagen']
+
+        # Validar filename y extensión
+        if archivo.filename == '':
+            return {'error': 'No se seleccionó ningún archivo'}, 400
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'bmp'}
+        if not ('.' in archivo.filename and archivo.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+            return {'error': 'Formato de imagen no válido'}, 400
+
         try:
-            img = Image.open(img_file.stream).convert('RGB')
+            img = Image.open(archivo.stream).convert('RGB')
             img = img.resize((224, 224))
-            arr = np.array(img) / 255.0
+            arr = img_to_array(img) / 255.0
             arr = np.expand_dims(arr, axis=0).astype(np.float32)
         except Exception as e:
             return {'error': 'imagen inválida', 'detail': str(e)}, 400
@@ -94,19 +102,35 @@ class Prediction(Resource):
             return {'error': 'no se encontró modelo activo'}, 500
 
         try:
-            pred = model.predict(arr, verbose=0)
-            prob = float(pred[0][0]) if hasattr(pred[0], '__len__') else float(pred[0])
-            is_morchella = prob >= 0.5
-            label = "Morchella" if is_morchella else "No Morchella"
+            raw_pred = model.predict(arr, verbose=0)
+            # manejar distintas formas de salida
+            if hasattr(raw_pred[0], '__len__'):
+                prob = float(raw_pred[0][0])
+            else:
+                prob = float(raw_pred[0])
+            es_morchella = prob > 0.5
+            resultado = "Es morchella" if es_morchella else "No es morchella"
+            confianza = prob if es_morchella else 1.0 - prob
 
-            # actualizar contadores
-            _increment_prediction_count(is_morchella)
+            # Log mínimo en MLflow (opcional, anidado)
+            try:
+                with mlflow.start_run(nested=True):
+                    mlflow.log_metric("prediction_confidence", float(round(confianza, 4)))
+                    mlflow.log_param("prediction_class", resultado)
+                    mlflow.log_param("input_filename", archivo.filename)
+            except Exception:
+                pass
+
+            # actualizar contadores en BD
+            _increment_prediction_count(es_morchella)
 
             return {
-                'model_source': model_source,
-                'prediction': label,
-                'confidence': prob
-            }
+                'resultado': resultado,
+                'confianza': round(float(confianza), 4),
+                'probabilidad_morchella': round(float(prob), 4),
+                'probabilidad_no_morchella': round(float(1.0 - prob), 4),
+                'model_source': model_source
+            }, 200
         except Exception as e:
             return {'error': 'falló la predicción', 'detail': str(e)}, 500
 

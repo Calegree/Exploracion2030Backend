@@ -7,6 +7,7 @@ import json
 
 from ..extensions import db
 from ..models import UploadedModel, ActiveModel
+from mlflow.tracking import MlflowClient
 
 upload_api = Blueprint('upload_api', __name__)
 
@@ -48,16 +49,39 @@ def upload_model():
         db.session.rollback()
         return jsonify({'error': 'DB error al guardar metadata', 'detail': str(e)}), 500
 
+    # Intentar crear un run en MLflow y subir el archivo como artifact.
+    run_id = None
+    try:
+        client = MlflowClient()
+        exp_name = current_app.config.get('MLFLOW_EXPERIMENT', 'default')
+        exp = client.get_experiment_by_name(exp_name)
+        if exp is None:
+            exp_id = client.create_experiment(exp_name)
+        else:
+            exp_id = exp.experiment_id
+
+        run = client.create_run(exp_id)
+        run_id = run.info.run_id
+
+        # Log del artifact (archivo único)
+        client.log_artifact(run_id, dest)
+        # Marcar run como terminado
+        client.set_terminated(run_id)
+    except Exception as e:
+        # registrar la excepción completa para ver el stacktrace en logs
+        current_app.logger.exception("mlflow: no se pudo subir artifact/crear run")
+        run_id = None
+
     # Activar automáticamente el modelo subido: crear entrada ActiveModel (histórico)
     try:
-        am = ActiveModel(run_id=None, model_name=filename, local_path=dest, size=size, uploaded_at=uploaded_at)
+        am = ActiveModel(run_id=run_id, model_name=filename, local_path=dest, size=size, uploaded_at=uploaded_at)
         db.session.add(am)
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'DB error al activar modelo', 'detail': str(e)}), 500
 
-    return jsonify({'filename': filename, 'size': size, 'uploaded_at': uploaded_at.isoformat() if uploaded_at else None}), 201
+    return jsonify({'filename': filename, 'size': size, 'uploaded_at': uploaded_at.isoformat() if uploaded_at else None, 'run_id': run_id}), 201
 
 @upload_api.route('/upload/models', methods=['GET'])
 @swag_from(os.path.join(YML_DIR, 'upload_models.yml'))

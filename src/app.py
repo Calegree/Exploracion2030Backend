@@ -6,8 +6,8 @@ from flask_cors import CORS
 from flask import request
 import os
 
-# cargar .env
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
+# cargar .env temprano
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 from .extensions import db
 # importar modelos para que SQLAlchemy los registre

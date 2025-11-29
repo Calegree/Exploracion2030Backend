@@ -3,8 +3,7 @@ post:
   tags:
     - Consumo de modelo
   summary: Clasificar imagen de hongo (Morchella vs No Morchella)
-  description: >
-    Este endpoint recibe una imagen y predice si es un hongo del género Morchella.
+  description: Este endpoint recibe una imagen y predice si es un hongo del género Morchella.
   consumes:
     - multipart/form-data
   parameters:
@@ -19,11 +18,13 @@ post:
       schema:
         type: object
         properties:
-          model_source:
+          resultado:
             type: string
-          prediction:
-            type: string
-          confidence:
+          confianza:
+            type: number
+          probabilidad_morchella:
+            type: number
+          probabilidad_no_morchella:
             type: number
     400:
       description: Imagen no enviada o inválida
