@@ -1,10 +1,10 @@
+import os
 from dotenv import load_dotenv
 from flask import Flask
 from flask_restful import Api
 from flasgger import Swagger
 from flask_cors import CORS
 from flask import request
-import os
 
 # cargar .env temprano
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -76,6 +76,14 @@ swagger_config.setdefault('oauth', {})
 # Flasgger reciba objetos válidos (evita inyección accidental de literales Python como None)
 try:
     import yaml as _yaml
+    # intentar importar flasgger solo aquí
+    try:
+        from flasgger import Swagger
+        _HAS_SWAGGER = True
+    except Exception:
+        Swagger = None
+        _HAS_SWAGGER = False
+
     YML_DIR = os.path.join(os.path.dirname(__file__), 'flasgger')
     path_map = {
         '/dashboard/prediction_counts': 'mlflow_prediction_counts.yml',
@@ -106,11 +114,18 @@ try:
         'paths': template_paths
     }
 
-    # Instanciar Swagger DESPUÉS de registrar todas las rutas
-    swagger = Swagger(app, config=swagger_config, template=swagger_template)
+    if _HAS_SWAGGER:
+        swagger = Swagger(app, config=swagger_config, template=swagger_template)
+    else:
+        # fallback: no flasgger disponible
+        swagger = None
 except Exception:
-    # Fallback: instanciar sin template si algo falla
-    swagger = Swagger(app, config=swagger_config)
+    # Fallback: instanciar sin template si algo falla o sin flasgger
+    try:
+        from flasgger import Swagger
+        swagger = Swagger(app, config=swagger_config)
+    except Exception:
+        swagger = None
 
 
     # Small runtime fix: some Flasgger templates may render Python None into the
@@ -128,6 +143,6 @@ except Exception:
             pass
         return response
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Ejecuta la API Flask en el puerto 5000 (usa FLASK_PORT si quieres cambiarlo)
-    app.run(host='0.0.0.0', port=int(os.getenv('FLASK_PORT', '5000')), debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,65 @@
+version: "3.8"
+services:
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio-data:/data
+    command: server /data --console-address ":9001"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: morchellappusr
+      POSTGRES_PASSWORD: morchellapppass
+      POSTGRES_DB: morchellappdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mlflow:
+    image: python:3.11-slim
+    depends_on:
+      - minio
+      - postgres
+    ports:
+      - "5001:5001"
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
+      - MLFLOW_PG_USER=${MLFLOW_PG_USER}
+      - MLFLOW_PG_PASSWORD=${MLFLOW_PG_PASSWORD}
+      - MLFLOW_PG_DB=${MLFLOW_PG_DB}
+    volumes:
+      - ./mlflow-data:/mlflow
+    command: >
+      sh -c "pip install --no-cache-dir mlflow boto3 psycopg2-binary &&
+             mlflow server --backend-store-uri postgresql://${MLFLOW_PG_USER}:${MLFLOW_PG_PASSWORD}@postgres:5432/${MLFLOW_PG_DB} --default-artifact-root s3://mlflow --host 0.0.0.0 --port 5001"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file:
+      - .env
+    depends_on:
+      - minio
+      - postgres
+      - mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+
+volumes:
+  pgdata:
+  minio-data:
+  mlflow-data:

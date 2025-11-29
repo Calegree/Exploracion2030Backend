@@ -1,0 +1,11 @@
+gunicorn==23.0.0
+Flask==3.1.1
+Flask-RESTful==0.3.10
+flask-cors==6.0.1
+Flask-SQLAlchemy==3.1.1
+psycopg2-binary==2.9.11
+requests==2.32.4
+boto3>=1.26.0,<2.0.0   # usar Boto3 1.x (o quitar si no lo necesitas)
+minio>=7.1.0
+python-dotenv>=0.21.0
+flasgger>=0.9.5
