@@ -1,0 +1,3 @@
+CREATE USER mlflow WITH PASSWORD 'mlflowpass';
+CREATE DATABASE mlflow_db OWNER mlflow;
+GRANT ALL PRIVILEGES ON DATABASE mlflow_db TO mlflow;

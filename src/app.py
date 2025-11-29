@@ -5,6 +5,7 @@ from flask_restful import Api
 from flasgger import Swagger
 from flask_cors import CORS
 from flask import request
+import sqlalchemy  # nuevo import para manejar excepciones
 
 # cargar .env temprano
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -22,8 +23,15 @@ app.config.setdefault('SQLALCHEMY_TRACK_MODIFICATIONS', False)
 db.init_app(app)
 
 # crear tablas automáticamente al iniciar la app (solo en desarrollo)
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    # evitar que errores de creación de tablas detengan el proceso (race conditions, duplicados)
+    try:
+        app.logger.warning("db.create_all() skipped: %s", e)
+    except Exception:
+        pass
 
 # configurar API, Swagger, CORS, blueprints, etc.
 api = Api(app)

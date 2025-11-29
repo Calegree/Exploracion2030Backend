@@ -1,15 +1,27 @@
 FROM python:3.11-slim
 
-ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y build-essential git && rm -rf /var/lib/apt/lists/*
+# Instalar dependencias del sistema primero (necesarias para compilar ruedas)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libopenblas-dev \
+    libsndfile1 \
+    gfortran \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# copiar requirements y instalar
-COPY requirements-docker.txt /app/requirements-docker.txt
-RUN pip install --upgrade pip && pip install --no-cache-dir -r /app/requirements-docker.txt
+# Usar el requirements optimizado para la imagen Docker
+COPY requirements-docker.txt .
+RUN pip install --no-cache-dir -r requirements-docker.txt
 
 COPY . /app
 
-EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "src.app:app"]
+# Copiar script de espera (entrypoint)
+COPY docker/wait-for-postgres.sh /usr/local/bin/wait-for-postgres.sh
+RUN chmod +x /usr/local/bin/wait-for-postgres.sh
+
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["/usr/local/bin/wait-for-postgres.sh"]
+CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3"]
