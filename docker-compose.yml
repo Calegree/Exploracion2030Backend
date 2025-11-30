@@ -25,7 +25,9 @@ services:
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
 
   mlflow:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mlflow
     depends_on:
       - minio
       - postgres
@@ -40,9 +42,6 @@ services:
       - MLFLOW_PG_DB=${MLFLOW_PG_DB:-morchellappdb}
     volumes:
       - ./mlflow-data:/mlflow
-    command: >
-      sh -c "pip install --no-cache-dir mlflow boto3 psycopg2-binary gunicorn &&
-             exec gunicorn -b 0.0.0.0:5001 -w 4 -k sync --timeout 120 mlflow.server:app"
 
   api:
     build:
