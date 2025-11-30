@@ -26,3 +26,16 @@ mlflow.db-journal
 
 # Otros
 .env
+
+# Ignorar datos de runtime y entornos locales
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+mlruns/
+minio-data/
+mlflow-data/
+pgdata/

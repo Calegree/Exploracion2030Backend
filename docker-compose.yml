@@ -14,15 +14,15 @@ services:
 
   postgres:
     image: postgres:15
+    volumes:
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: morchellappusr
-      POSTGRES_PASSWORD: morchellapppass
       POSTGRES_DB: morchellappdb
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
 
   mlflow:
     build:
@@ -34,12 +34,14 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_REGION=us-east-1
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - MLFLOW_PG_USER=${MLFLOW_PG_USER:-morchellappusr}
-      - MLFLOW_PG_PASSWORD=${MLFLOW_PG_PASSWORD:-morchellapppass}
-      - MLFLOW_PG_DB=${MLFLOW_PG_DB:-morchellappdb}
+      - MLFLOW_PG_DB=morchellappdb
+      - MLFLOW_PG_USER=mlflow
+      - MLFLOW_PG_PASSWORD=mlflowpass
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
     volumes:
       - ./mlflow-data:/mlflow
 
@@ -47,18 +49,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgresql://morchellappusr:morchellapppass@postgres:5432/morchellappdb
     depends_on:
-      - minio
       - postgres
       - mlflow
+      - minio
     ports:
       - "5000:5000"
-    volumes:
-      - .:/app
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - MLFLOW_TRACKING_URI=http://mlflow:5001
 
 volumes:
   pgdata:
