@@ -27,8 +27,25 @@ class ModelLoader:
         if not path:
             return None
         if cls._model is None or cls._path != path:
-            cls._model = load_model(path)
-            cls._path = path
+            # intento robusto de carga con diagnóstico
+            try:
+                # cargar sin compilar para evitar problemas de optimizadores
+                cls._model = load_model(path, compile=False)
+                cls._path = path
+            except Exception as e:
+                # guardar excepción para devolver información útil al log
+                err = str(e)
+                try:
+                    # intento fallback: usar mlflow si la ruta parece un URI de mlflow
+                    import mlflow
+                    try:
+                        cls._model = mlflow.keras.load_model(path)
+                        cls._path = path
+                    except Exception:
+                        raise
+                except Exception:
+                    # re-lanzar con contexto para que se vea en logs
+                    raise RuntimeError(f"Error cargando modelo desde '{path}': {err}") from e
         return cls._model
 
 def _ensure_prediction_counts():

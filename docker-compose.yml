@@ -1,4 +1,4 @@
-version: "3.8"
+#version: "3.8"
 services:
   minio:
     image: minio/minio:latest
@@ -36,14 +36,19 @@ services:
       - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - MLFLOW_TRACKING_URI=http://mlflow:5001
-      - MLFLOW_PG_USER=${MLFLOW_PG_USER}
-      - MLFLOW_PG_PASSWORD=${MLFLOW_PG_PASSWORD}
-      - MLFLOW_PG_DB=${MLFLOW_PG_DB}
+      - MLFLOW_PG_USER=${MLFLOW_PG_USER:-morchellappusr}
+      - MLFLOW_PG_PASSWORD=${MLFLOW_PG_PASSWORD:-morchellapppass}
+      - MLFLOW_PG_DB=${MLFLOW_PG_DB:-morchellappdb}
     volumes:
       - ./mlflow-data:/mlflow
     command: >
       sh -c "pip install --no-cache-dir mlflow boto3 psycopg2-binary &&
-             mlflow server --backend-store-uri postgresql://${MLFLOW_PG_USER}:${MLFLOW_PG_PASSWORD}@postgres:5432/${MLFLOW_PG_DB} --default-artifact-root s3://mlflow --host 0.0.0.0 --port 5001"
+             mlflow server \
+               --backend-store-uri postgresql://${MLFLOW_PG_USER}:${MLFLOW_PG_PASSWORD}@postgres:5432/${MLFLOW_PG_DB} \
+               --default-artifact-root s3://mlflow \
+               --host 0.0.0.0 --port 5001 \
+               --allowed-hosts 'mlflow,localhost,127.0.0.1,postgres' \
+               --cors-allowed-origins '*'"
 
   api:
     build:
