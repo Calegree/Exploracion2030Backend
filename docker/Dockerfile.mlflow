@@ -12,4 +12,10 @@ RUN apt-get update \
  && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
-CMD ["sh", "-lc", "mlflow server --host 0.0.0.0 --port 5001 --backend-store-uri postgresql://${MLFLOW_PG_USER:-mlflow}:${MLFLOW_PG_PASSWORD:-mlflowpass}@postgres:5432/${MLFLOW_PG_DB:-mlflow_db} --default-artifact-root s3://mlflow/ --serve-artifacts"]
+# Copy wait script into image and ensure it's executable
+COPY docker/wait-for-mlflow-db.sh /usr/local/bin/wait-for-mlflow-db.sh
+RUN chmod +x /usr/local/bin/wait-for-mlflow-db.sh
+
+ENV MLFLOW_PORT=5001
+
+CMD ["/usr/local/bin/wait-for-mlflow-db.sh"]
