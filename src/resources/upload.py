@@ -65,6 +65,20 @@ def upload_model():
 
         # Log del artifact (archivo único)
         client.log_artifact(run_id, dest)
+
+        # Intentar subir matriz de confusión si existe en el repo (para que
+        # el endpoint /mlflow/confusion_matrix pueda devolverla)
+        try:
+            conf_json = os.path.join(BASE_DIR, 'model', 'confusion_matrix.json')
+            conf_png = os.path.join(BASE_DIR, 'model', 'confusion_matrix.png')
+            if os.path.exists(conf_json):
+                client.log_artifact(run_id, conf_json)
+            if os.path.exists(conf_png):
+                client.log_artifact(run_id, conf_png)
+        except Exception as e:
+            # no fatal, solo loggear
+            current_app.logger.warning("mlflow: no se pudo subir artifact de confusion matrix: %s", e)
+
         # Marcar run como terminado
         client.set_terminated(run_id)
     except Exception as e:

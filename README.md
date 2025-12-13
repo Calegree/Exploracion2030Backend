@@ -91,6 +91,8 @@ export MLFLOW_TRACKING_URI=http://127.0.0.1:5001
 ##Para entrenar un modelo
 docker compose exec -T api bash -lc "cd /app/src && python train_model.py"
 
+## o este
+docker-compose exec api python -u src/train_model.py
 
 
 pip install -r src/requirements-linux.txt

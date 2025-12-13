@@ -23,7 +23,7 @@ def setup_mlflow():
     Configura MLflow para usar SQLite como backend
     """
     # Configurar tracking URI para SQLite
-    tracking_uri = "sqlite:///mlflow.db"
+    tracking_uri = os.getenv('MLFLOW_TRACKING_URI', 'http://mlflow:5001')
     mlflow.set_tracking_uri(tracking_uri)
     
     # Crear experimento si no existe
