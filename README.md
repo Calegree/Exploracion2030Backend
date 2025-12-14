@@ -89,10 +89,39 @@ export MLFLOW_TRACKING_URI=http://127.0.0.1:5001
 
 
 ##Para entrenar un modelo
-docker compose exec -T api bash -lc "cd /app/src && python train_model.py"
 
-## o este
-docker-compose exec api python -u src/train_model.py
+### Opción 1: Script unificado (Recomendado)
+```bash
+# Entrenar con MobileNetV2 (ligero y rápido)
+docker-compose exec api python src/train.py --model mobilenet
+
+# Entrenar con EfficientNetB0 (mayor precisión)
+docker-compose exec api python src/train.py --model efficientnet
+
+# Entrenar ambos modelos y comparar
+docker-compose exec api python src/train.py --model both --compare
+```
+
+### Opción 2: Scripts individuales
+```bash
+# MobileNetV2
+docker-compose exec api python src/train_model_mobilenet.py
+
+# EfficientNetB0
+docker-compose exec api python src/train_model_efficientnet.py
+
+# Comparar resultados
+docker-compose exec api python src/compare_models.py
+```
+
+### Opción 3: Entrenamiento manual desde contenedor
+```bash
+docker compose exec -T api bash -lc "cd /app/src && python train_model_mobilenet.py"
+# o
+docker-compose exec api python -u src/train_model_efficientnet.py
+```
+
+📖 **Documentación completa:** Ver `src/README_TRAINING.md`
 
 
 pip install -r src/requirements-linux.txt

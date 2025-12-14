@@ -51,12 +51,14 @@ app.config['SWAGGER'].setdefault('auth', {})
 # Registrar la API RESTful (resources) y blueprints ANTES de instanciar Swagger
 from .resources.prediction import Prediction
 from .resources.download_fungis import DownloadImages
+from .resources.download_fungis_2 import DownloadImages2
 from .resources.upload import upload_api
 from .resources.mlflow_dashboard import dashboard_api
 
 # Resources (Flask-RESTful)
 api.add_resource(Prediction, '/predict')
 api.add_resource(DownloadImages, '/download/fungis')
+api.add_resource(DownloadImages2, '/download/fungis2')
 
 # Blueprints (Flask)
 app.register_blueprint(upload_api)
@@ -99,7 +101,8 @@ try:
         '/mlflow/confusion_matrix_current': 'mlflow_confusion_matrix_current.yml',
         '/mlflow/confusion_matrix/{run_id}': 'mlflow_confusion_matrix.yml',
         '/upload/active': 'upload_active.yml',
-        '/upload/models': 'upload_models.yml'
+        '/upload/models': 'upload_models.yml',
+        '/download/fungis2': 'download_fungis_2.yml'
     }
     template_paths = {}
     for p, fname in path_map.items():

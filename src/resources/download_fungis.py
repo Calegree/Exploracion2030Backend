@@ -5,6 +5,7 @@ from urllib.parse import quote
 from flasgger import swag_from
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import shutil
 
 BASE_DIR = os.path.dirname(__file__)
 DATASET_DIR = os.path.join(BASE_DIR, '..', 'dataset')
@@ -43,6 +44,24 @@ def fetch_images(scientific_name, cantidad):
                     if len(results) >= cantidad:
                         return results
     return results
+
+# purga segura del dataset
+def purge_dataset():
+    try:
+        if os.path.isdir(DATASET_DIR):
+            # eliminar subcarpetas específicas
+            for sub in ['morchella', 'no_morchella']:
+                subpath = os.path.join(DATASET_DIR, sub)
+                if os.path.isdir(subpath):
+                    shutil.rmtree(subpath, ignore_errors=True)
+        else:
+            os.makedirs(DATASET_DIR, exist_ok=True)
+        # recrear estructura base
+        os.makedirs(os.path.join(DATASET_DIR, 'morchella'), exist_ok=True)
+        os.makedirs(os.path.join(DATASET_DIR, 'no_morchella'), exist_ok=True)
+        print("🧹 Dataset purgado: morchella/ y no_morchella/ reiniciados")
+    except Exception as e:
+        print(f"⚠️ Error purgando dataset: {e}")
 
 # descarga una sola imagen
 def download_single_image(url, folder_name, especie_prefix, idx):
@@ -96,6 +115,8 @@ class DownloadImages(Resource):
         total_success = 0
         total_failed = 0
         resultados = []
+        # purgar dataset antes de descargar
+        purge_dataset()
         
         try:
             for categoria, especies in ESPECIES.items():
