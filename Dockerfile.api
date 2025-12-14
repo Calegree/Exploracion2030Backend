@@ -24,4 +24,4 @@ RUN chmod +x /usr/local/bin/wait-for-postgres.sh
 ENV PYTHONUNBUFFERED=1
 
 ENTRYPOINT ["/usr/local/bin/wait-for-postgres.sh"]
-CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3"]
+CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "300", "--graceful-timeout", "300"]
