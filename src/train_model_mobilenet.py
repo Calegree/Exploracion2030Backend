@@ -255,13 +255,50 @@ def train_model():
         except Exception as e:
             print(f"⚠️ No se pudo guardar/loggear confusion_matrix.json: {e}")
         
-        # Guardar modelo
-        model_path = os.path.join(os.path.dirname(__file__), 'model', 'model_morchella_mobilenet.h5')
+        # Guardar modelo localmente en formato .keras (recomendado)
+        model_path = os.path.join(os.path.dirname(__file__), 'model', 'model_morchella_mobilenet.keras')
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        model.save(model_path)
         
-        # Log del modelo en MLflow
-        mlflow.keras.log_model(model, "model")
+        print("💾 Guardando modelo localmente...")
+        try:
+            model.save(model_path)
+            print(f"✅ Modelo guardado localmente en: {model_path}")
+            # Subir el .keras como artifact simple para garantizar que quede en el run
+            mlflow.log_artifact(model_path, artifact_path="model")
+            print("✅ Archivo .keras subido como artifact en model/")
+        except Exception as e:
+            print(f"❌ Error guardando modelo local: {e}")
+        
+        # Log del modelo en MLflow CON manejo de errores y verificación
+        print("📤 Subiendo modelo a MLflow...")
+        try:
+            # IMPORTANTE: registered_model_name=None evita auto-registro en Model Registry
+            # El modelo se guardará SOLO en mlflow/1/<run_id>/artifacts/model/
+            # Nota: No usamos input_example/signature por bug en MLflow con paths temporales
+            mlflow.keras.log_model(
+                model, 
+                "model",
+                registered_model_name=None  # NO registrar automáticamente en Model Registry
+            )
+            print("✅ Modelo logueado en MLflow correctamente")
+            print(f"📁 Ubicación: mlflow/1/{mlflow.active_run().info.run_id}/artifacts/model/")
+            
+            # Verificar que se guardó en artifacts
+            from mlflow.tracking import MlflowClient
+            client = MlflowClient()
+            run_id = mlflow.active_run().info.run_id
+            artifacts = client.list_artifacts(run_id, "model")
+            if artifacts:
+                print(f"✅ Verificado: modelo tiene {len(artifacts)} archivos en MLflow")
+                for art in artifacts[:5]:  # Mostrar primeros 5
+                    print(f"   - {art.path}")
+            else:
+                print("⚠️ ADVERTENCIA: No se encontraron artifacts del modelo en MLflow")
+                
+        except Exception as e:
+            print(f"❌ ERROR al loguear modelo en MLflow: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Log de información adicional
         mlflow.log_metric("final_accuracy", val_accuracy)
