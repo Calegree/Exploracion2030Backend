@@ -128,5 +128,59 @@ pip install -r src/requirements-linux.txt
 
 pip install -r src/requirements.txt
 
+---
+
+## 📋 Model Cards - Documentación Automática de Modelos
+
+Cada modelo entrenado genera automáticamente un **Model Card en Quarto** con:
+- Parámetros y arquitectura
+- Métricas (accuracy, precision, recall, F1-score)
+- Matriz de confusión y análisis de errores
+- Dataset information
+- Limitaciones y recomendaciones
+
+### 🚀 Uso Rápido
+
+```bash
+# 1. Entrenar un modelo (genera Model Card automáticamente)
+docker-compose exec api python src/train.py --model efficientnet
+
+# 2. Ver modelos disponibles
+python src/model_card_utils.py list
+
+# 3. Compilar a HTML profesional
+python src/model_card_utils.py compile-all
+
+# 4. Crear documento comparativo
+python src/model_card_utils.py compare
+
+# 5. Abrir en navegador
+python src/model_card_utils.py open model_cards/model_comparison.html
+```
+
+### 📚 Documentación Completa
+
+Ver [`model_cards/README.md`](model_cards/README.md) para:
+- Instalación de Quarto
+- Guía completa de uso
+- Ejemplos de workflows
+- Personalización
+- Troubleshooting
+
+### 📊 Estructura de Resultados
+
+```
+model_cards/
+├── model_card_EfficientNetB0_20251215_134500.qmd   ← Fuente (editable)
+├── model_card_EfficientNetB0_20251215_134500.html  ← HTML compilado
+├── model_card_MobileNetV2_20251215_141200.qmd
+├── model_card_MobileNetV2_20251215_141200.html
+├── model_comparison.qmd                              ← Comparativa
+├── model_comparison.html
+└── model-card-style.css                              ← Estilos
+```
+
+---
+
 
 

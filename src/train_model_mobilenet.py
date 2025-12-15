@@ -307,13 +307,26 @@ def train_model():
         mlflow.set_tag("task", "binary_classification")
         mlflow.set_tag("dataset_size", len(X))
         
+        run_id = mlflow.active_run().info.run_id
+        
         print(f"\n{'='*60}")
         print(f"✅ Modelo MobileNetV2 guardado en: {model_path}")
         print(f"📊 Accuracy de validación: {val_accuracy:.4f}")
         print(f"📊 Loss de validación: {val_loss:.4f}")
-        print(f"🔗 Run ID: {mlflow.active_run().info.run_id}")
+        print(f"🔗 Run ID: {run_id}")
         print(f"📈 Ver resultados en: mlflow ui")
         print(f"{'='*60}\n")
+        
+        # Generar Model Card automáticamente y guardarlo en MLflow/MinIO
+        print("📋 Generando Model Card y guardando en MLflow...")
+        try:
+            from model_card_mlflow_logger import log_model_card_automatic
+            dataset_path = os.path.join(os.path.dirname(__file__), 'dataset')
+            log_model_card_automatic(run_id, 'MobileNetV2', dataset_path)
+        except ImportError:
+            print("⚠️ No se pudo importar model_card_mlflow_logger")
+        except Exception as e:
+            print(f"⚠️ Error generando Model Card: {e}")
         
         return model, history
 

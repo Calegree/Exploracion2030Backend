@@ -287,13 +287,42 @@ def train_model():
         except Exception as e:
             print(f"⚠️ No se pudo guardar/loggear confusion_matrix.json: {e}")
         
-        # Guardar modelo
-        model_path = os.path.join(os.path.dirname(__file__), 'model', 'model_morchella_efficientnet.h5')
+        # Guardar modelo localmente en formato .keras (consistente con TF>=2.12)
+        model_path = os.path.join(os.path.dirname(__file__), 'model', 'model_morchella_efficientnet.keras')
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
-        model.save(model_path)
-        
-        # Log del modelo en MLflow
-        mlflow.keras.log_model(model, "model")
+        print("💾 Guardando modelo EfficientNet localmente...")
+        try:
+            model.save(model_path)
+            print(f"✅ Modelo EfficientNet guardado en: {model_path}")
+            # Subir el archivo .keras como artifact para garantizar que aparezca en el run
+            mlflow.log_artifact(model_path, artifact_path="model")
+            print("✅ Archivo .keras de EfficientNet subido como artifact en model/")
+        except Exception as e:
+            print(f"❌ Error guardando modelo EfficientNet local: {e}")
+
+        # Log del modelo en MLflow (carpeta 'model')
+        print("📤 Subiendo modelo EfficientNet a MLflow...")
+        try:
+            mlflow.keras.log_model(
+                model,
+                "model",
+                registered_model_name=None
+            )
+            print("✅ Modelo EfficientNet logueado en MLflow correctamente")
+            from mlflow.tracking import MlflowClient
+            client = MlflowClient()
+            run_id = mlflow.active_run().info.run_id
+            artifacts = client.list_artifacts(run_id, "model")
+            if artifacts:
+                print(f"✅ Verificado: EfficientNet tiene {len(artifacts)} archivos en MLflow")
+                for art in artifacts[:5]:
+                    print(f"   - {art.path}")
+            else:
+                print("⚠️ ADVERTENCIA: No se encontraron artifacts del modelo EfficientNet en MLflow")
+        except Exception as e:
+            print(f"❌ ERROR al loguear modelo EfficientNet en MLflow: {e}")
+            import traceback
+            traceback.print_exc()
         
         # Log de información adicional
         mlflow.log_metric("final_accuracy", val_accuracy)
@@ -303,15 +332,28 @@ def train_model():
         mlflow.set_tag("dataset_size", len(X))
         mlflow.set_tag("base_model", "EfficientNetB0")
         
+        run_id = mlflow.active_run().info.run_id
+        
         print(f"\n{'='*60}")
         print(f"✅ Modelo EfficientNetB0 guardado en: {model_path}")
         print(f"📊 Accuracy de validación: {val_accuracy:.4f}")
         print(f"📊 Loss de validación: {val_loss:.4f}")
         print(f"📊 Precision de validación: {val_precision:.4f}")
         print(f"📊 Recall de validación: {val_recall:.4f}")
-        print(f"🔗 Run ID: {mlflow.active_run().info.run_id}")
+        print(f"🔗 Run ID: {run_id}")
         print(f"📈 Ver resultados en: mlflow ui")
         print(f"{'='*60}\n")
+        
+        # Generar Model Card automáticamente y guardarlo en MLflow/MinIO
+        print("📋 Generando Model Card y guardando en MLflow...")
+        try:
+            from model_card_mlflow_logger import log_model_card_automatic
+            dataset_path = os.path.join(os.path.dirname(__file__), 'dataset')
+            log_model_card_automatic(run_id, 'EfficientNetB0', dataset_path)
+        except ImportError:
+            print("⚠️ No se pudo importar model_card_mlflow_logger")
+        except Exception as e:
+            print(f"⚠️ Error generando Model Card: {e}")
         
         return model, history
 
