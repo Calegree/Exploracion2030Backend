@@ -15,13 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-docker.txt .
 RUN pip install --no-cache-dir -r requirements-docker.txt
 
-COPY . /app
-
-# Copiar script de espera (entrypoint)
+# Copiar script de espera ANTES de copiar todo el proyecto
 COPY docker/wait-for-postgres.sh /usr/local/bin/wait-for-postgres.sh
-RUN chmod +x /usr/local/bin/wait-for-postgres.sh
+RUN sed -i 's/\r$//' /usr/local/bin/wait-for-postgres.sh && chmod +x /usr/local/bin/wait-for-postgres.sh
+
+COPY . /app
 
 ENV PYTHONUNBUFFERED=1
 
 ENTRYPOINT ["/usr/local/bin/wait-for-postgres.sh"]
-CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3"]
+CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "120"]
