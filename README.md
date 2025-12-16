@@ -171,6 +171,71 @@ docker-compose exec api curl -X POST http://localhost:5000/download/balanced_650
 
 ---
 
+## 🎯 Activación de Modelos - Model Activation
+
+### Activar Modelo desde MLflow/MinIO
+
+Después de entrenar un modelo, puedes activarlo directamente desde MLflow sin necesidad de descargarlo:
+
+```bash
+# Activar modelo usando el Run ID de MLflow
+curl -X POST http://localhost:5000/upload/model/{run_id}
+
+# Ejemplo con Run ID específico
+curl -X POST http://localhost:5000/upload/model/f8b433193fcd4f6c91c632f83423ec5d
+
+# Con docker-compose
+docker-compose exec api curl -X POST http://localhost:5000/upload/model/f8b433193fcd4f6c91c632f83423ec5d
+```
+
+**¿Cómo funciona?**
+1. Busca el run en MLflow usando el run_id
+2. Verifica que existan artifacts del modelo (.keras) en MinIO
+3. Valida que el modelo sea cargable
+4. Lo registra en la BD y activa para predicciones
+
+**Ventajas:**
+- ✅ No necesitas descargar el modelo localmente
+- ✅ Acceso directo al storage de MLflow/MinIO
+- ✅ Incluye validación automática
+- ✅ Retorna métricas y parámetros del entrenamiento
+
+### Ver Modelo Activo
+
+```bash
+# Ver qué modelo está actualmente activo
+curl http://localhost:5000/upload/active
+
+# Ejemplo de respuesta:
+# {
+#   "active_model": "model_morchella_efficientnet.keras",
+#   "run_id": "f8b433193fcd4f6c91c632f83423ec5d",
+#   "uploaded_at": "2025-12-16T03:45:00",
+#   "set_at": "2025-12-16T04:11:00"
+# }
+```
+
+### Métodos Alternativos de Activación
+
+#### Opción 1: Subir archivo de modelo
+```bash
+# Subir un archivo .keras/.h5 directamente
+curl -X POST -F "model=@model_morchella.keras" http://localhost:5000/upload/model
+```
+
+#### Opción 2: Activar modelo previamente subido
+```bash
+# Listar modelos disponibles
+curl http://localhost:5000/upload/models
+
+# Activar uno específico
+curl -X POST http://localhost:5000/upload/activate \
+  -H "Content-Type: application/json" \
+  -d '{"model": "model_morchella_efficientnet.keras"}'
+```
+
+---
+
 ## 📋 Model Cards - Documentación Automática de Modelos
 
 Cada modelo entrenado genera automáticamente un **Model Card en Quarto** con:
