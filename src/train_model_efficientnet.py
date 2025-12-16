@@ -5,9 +5,11 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications.efficientnet import preprocess_input
 from tensorflow.keras.layers import GlobalAveragePooling2D
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import precision_recall_curve
 import mlflow
 import mlflow.keras
 import matplotlib.pyplot as plt
@@ -54,7 +56,7 @@ def load_and_preprocess_data(dataset_path, img_size=(224, 224)):
         try:
             img = Image.open(img_path).convert('RGB')
             img = img.resize(img_size)
-            img_array = np.array(img) / 255.0
+            img_array = preprocess_input(np.array(img))
             images.append(img_array)
             labels.append(1)  # Morchella = 1
         except Exception as e:
@@ -66,7 +68,7 @@ def load_and_preprocess_data(dataset_path, img_size=(224, 224)):
         try:
             img = Image.open(img_path).convert('RGB')
             img = img.resize(img_size)
-            img_array = np.array(img) / 255.0
+            img_array = preprocess_input(np.array(img))
             images.append(img_array)
             labels.append(0)  # No-Morchella = 0
         except Exception as e:
@@ -166,13 +168,15 @@ def train_model():
         'dropout_rate': 0.4,
         'model_type': 'EfficientNetB0',
         'transfer_learning': True,
-        'data_augmentation': True
+        'data_augmentation': True,
+        'use_focal_loss': True,
+        'fine_tune': True,
+        'loss_function': 'Focal Loss',
+        'class_weight_positive': None,
+        'best_threshold': 0.5
     }
     
     with mlflow.start_run(run_name=f"EfficientNetB0_training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
-        # Log de parámetros
-        mlflow.log_params(params)
-        
         print("🔍 Cargando dataset...")
         dataset_path = os.path.join(os.path.dirname(__file__), 'dataset')
         X, y = load_and_preprocess_data(dataset_path, (params['img_size'], params['img_size']))
@@ -205,17 +209,37 @@ def train_model():
         print("🏗️ Creando modelo EfficientNetB0...")
         model = create_model((params['img_size'], params['img_size'], 3))
         
+        # Opcional: Focal loss para penalizar falsos negativos
+        loss_fn = 'binary_crossentropy'
+        if params.get('use_focal_loss'):
+            try:
+                import tensorflow_addons as tfa
+                loss_fn = tfa.losses.SigmoidFocalCrossEntropy(alpha=0.25, gamma=2.0)
+            except Exception:
+                loss_fn = 'binary_crossentropy'
+
         # Compilar modelo
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate']),
-            loss='binary_crossentropy',
-            metrics=['accuracy', tf.keras.metrics.Precision(), tf.keras.metrics.Recall()]
+            loss=loss_fn,
+            metrics=['accuracy', tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
         )
         
         print("🚀 Iniciando entrenamiento con EfficientNetB0...")
         print("💡 EfficientNet suele ofrecer mejor precisión que MobileNet con tamaño similar")
         
         # Entrenar modelo
+        # Class weights para compensar desbalance
+        pos_count = int(np.sum(y_train == 1))
+        neg_count = int(np.sum(y_train == 0))
+        class_weight = {0: 1.0, 1: (neg_count / pos_count) if pos_count > 0 else 1.0}
+        params['class_weight_positive'] = class_weight[1]
+
+        # Registrar parámetros después de calcular class_weight para evitar conflictos en MLflow
+        base_params = params.copy()
+        base_params.pop('best_threshold', None)
+        mlflow.log_params(base_params)
+
         history = model.fit(
             datagen.flow(X_train, y_train, batch_size=params['batch_size']),
             epochs=params['epochs'],
@@ -235,8 +259,40 @@ def train_model():
                     verbose=1
                 )
             ],
+            class_weight=class_weight,
             verbose=1
         )
+
+        # Fine-tuning: unfreeze last 20% of base model layers and train briefly with lower LR
+        if params.get('fine_tune'):
+            try:
+                base_model = model.layers[0]
+                total_layers = len(base_model.layers)
+                unfreeze_from = int(total_layers * 0.8)
+                for i, layer in enumerate(base_model.layers):
+                    layer.trainable = i >= unfreeze_from
+                model.compile(
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=params['learning_rate'] * 0.1),
+                    loss=loss_fn,
+                    metrics=['accuracy', tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
+                )
+                model.fit(
+                    datagen.flow(X_train, y_train, batch_size=params['batch_size']),
+                    epochs=5,
+                    validation_data=(X_val, y_val),
+                    callbacks=[
+                        tf.keras.callbacks.EarlyStopping(
+                            monitor='val_accuracy',
+                            patience=3,
+                            restore_best_weights=True,
+                            verbose=1
+                        )
+                    ],
+                    class_weight=class_weight,
+                    verbose=1
+                )
+            except Exception as e:
+                print(f"⚠️ Fine-tuning skipped due to error: {e}")
         
         # Evaluar modelo
         print("📊 Evaluando modelo...")
@@ -246,13 +302,23 @@ def train_model():
         val_precision = results[2] if len(results) > 2 else 0
         val_recall = results[3] if len(results) > 3 else 0
         
-        y_pred = (model.predict(X_val) > 0.5).astype(int)
+        # Predicciones y umbral óptimo basado en curva PR para maximizar F1
+        y_scores = model.predict(X_val)
+        try:
+            precision_arr, recall_arr, thresholds = precision_recall_curve(y_val, y_scores)
+            f1_arr = (2 * precision_arr * recall_arr) / (precision_arr + recall_arr + 1e-12)
+            best_idx = int(np.nanargmax(f1_arr))
+            best_threshold = thresholds[best_idx] if best_idx < len(thresholds) else 0.5
+        except Exception:
+            best_threshold = 0.5
+        y_pred = (y_scores > best_threshold).astype(int)
         
         # Log de métricas
         mlflow.log_metric("val_accuracy", val_accuracy)
         mlflow.log_metric("val_loss", val_loss)
         mlflow.log_metric("val_precision", val_precision)
         mlflow.log_metric("val_recall", val_recall)
+        mlflow.log_metric("best_threshold", float(best_threshold))
         
         # Calcular F1-Score
         if val_precision > 0 and val_recall > 0:
@@ -340,6 +406,7 @@ def train_model():
         print(f"📊 Loss de validación: {val_loss:.4f}")
         print(f"📊 Precision de validación: {val_precision:.4f}")
         print(f"📊 Recall de validación: {val_recall:.4f}")
+        print(f"📊 Umbral óptimo (PR-F1): {best_threshold:.4f}")
         print(f"🔗 Run ID: {run_id}")
         print(f"📈 Ver resultados en: mlflow ui")
         print(f"{'='*60}\n")

@@ -130,6 +130,47 @@ pip install -r src/requirements.txt
 
 ---
 
+## 📦 Dataset Download - Descarga de Datasets
+
+La API incluye endpoints para descargar datasets balanceados desde iNaturalist:
+
+### Endpoints Disponibles
+
+#### `/download/balanced_650` - **Recomendado para producción**
+Dataset balanceado 1300 imágenes (650 + 650) con alta diversidad:
+
+**Morchella (650 fotos):**
+- 25 Morchella andinensis
+- 6 Morchella aysenina  
+- 100 Morchella tridentina
+- 100 Morchella esculenta
+- 419 Morchella spp (sin ID específico)
+
+**No-Morchella (650 fotos) - 5 grupos diversos:**
+- **Ascomicetes** (330): Gyromitra, Helvella, Verpa
+- **Agaricales** (160): Amanita, Agaricus
+- **Boletus patagónicos** (90): Boletus, Suillus, Lactarius
+- **Políporos** (40): Trametes, Ganoderma, Fomes
+- **Gasteroides** (30): Lycoperdon, Calvatia, Phallus
+
+```bash
+# Descargar dataset completo (sobrescribe dataset actual)
+curl -X POST http://localhost:5000/download/balanced_650
+
+# Con docker-compose
+docker-compose exec api curl -X POST http://localhost:5000/download/balanced_650
+```
+
+#### Otros endpoints disponibles
+- `/download/balanced_600` - Dataset 1000 imágenes (600 + 400)
+- `/download/balanced_500` - Dataset 1000 imágenes (500 + 500)
+- `/download/fungis` - Dataset básico
+- `/download/fungis2` - Dataset alternativo
+
+⚠️ **IMPORTANTE:** Todos los endpoints de descarga sobrescriben la carpeta `src/dataset/`
+
+---
+
 ## 📋 Model Cards - Documentación Automática de Modelos
 
 Cada modelo entrenado genera automáticamente un **Model Card en Quarto** con:

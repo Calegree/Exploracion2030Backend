@@ -1,0 +1,180 @@
+Endpoint para descargar dataset balanceado 650-650
+---
+tags:
+  - Dataset Download
+summary: "Descarga dataset balanceado: 650 Morchella + 650 No-Morchella con alta diversidad"
+description: |
+  Descarga un dataset balanceado con especies específicas de Morchella y alta diversidad de hongos no-Morchella.
+  
+  **Composición Morchella (650 fotos):**
+  - 25 fotos de Morchella andinensis
+  - 6 fotos de Morchella aysenina
+  - 100 fotos de Morchella tridentina
+  - 100 fotos de Morchella esculenta
+  - 419 fotos de Morchella spp (sin ID específico)
+  
+  **Composición No-Morchella (650 fotos) - 5 grupos diversos:**
+  
+  1. **Ascomicetes (330 fotos):**
+     - Gyromitra esculenta (90)
+     - Gyromitra antarctica (70)
+     - Helvella lacunosa (60)
+     - Helvella crispa (60)
+     - Verpa bohemica (50)
+  
+  2. **Agaricales comunes (160 fotos):**
+     - Amanita muscaria (50)
+     - Amanita phalloides (40)
+     - Agaricus campestris (40)
+     - Agaricus bisporus (30)
+  
+  3. **Hongos de bosque patagónico (90 fotos):**
+     - Boletus edulis (40)
+     - Suillus luteus (30)
+     - Lactarius deliciosus (20)
+  
+  4. **Políporos y hongos de madera (40 fotos):**
+     - Trametes versicolor (15)
+     - Ganoderma lucidum (13)
+     - Fomes fomentarius (12)
+  
+  5. **Gasteroides y otras formas (30 fotos):**
+     - Lycoperdon perlatum (12)
+     - Calvatia gigantea (10)
+     - Phallus impudicus (8)
+  
+  **⚠️ ADVERTENCIA:** Este endpoint sobrescribe completamente la carpeta `src/dataset/`.
+  
+  Las imágenes se obtienen de iNaturalist con calidad "research grade" y se guardan en:
+  - `src/dataset/morchella/`
+  - `src/dataset/no_morchella/`
+
+responses:
+  200:
+    description: Dataset descargado exitosamente
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            message:
+              type: string
+              example: "Dataset balanceado 650-650 descargado"
+            statistics:
+              type: object
+              properties:
+                morchella:
+                  type: object
+                  properties:
+                    downloaded:
+                      type: integer
+                      example: 650
+                    failed:
+                      type: integer
+                      example: 0
+                    target:
+                      type: integer
+                      example: 650
+                    species:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          downloaded:
+                            type: integer
+                          failed:
+                            type: integer
+                          target:
+                            type: integer
+                no_morchella:
+                  type: object
+                  properties:
+                    downloaded:
+                      type: integer
+                      example: 650
+                    failed:
+                      type: integer
+                      example: 0
+                    target:
+                      type: integer
+                      example: 650
+                    species:
+                      type: object
+                      additionalProperties:
+                        type: object
+                        properties:
+                          downloaded:
+                            type: integer
+                          failed:
+                            type: integer
+                          target:
+                            type: integer
+                total:
+                  type: integer
+                  example: 1300
+                target_total:
+                  type: integer
+                  example: 1300
+        examples:
+          success:
+            value:
+              status: "success"
+              message: "Dataset balanceado 650-650 descargado"
+              statistics:
+                morchella:
+                  downloaded: 650
+                  failed: 0
+                  target: 650
+                  species:
+                    Morchella andinensis:
+                      downloaded: 25
+                      failed: 0
+                      target: 25
+                    Morchella aysenina:
+                      downloaded: 6
+                      failed: 0
+                      target: 6
+                    Morchella tridentina:
+                      downloaded: 100
+                      failed: 0
+                      target: 100
+                    Morchella esculenta:
+                      downloaded: 100
+                      failed: 0
+                      target: 100
+                    Morchella:
+                      downloaded: 419
+                      failed: 0
+                      target: 419
+                no_morchella:
+                  downloaded: 650
+                  failed: 0
+                  target: 650
+                  species:
+                    Gyromitra esculenta:
+                      downloaded: 100
+                      failed: 0
+                      target: 100
+                    Amanita muscaria:
+                      downloaded: 50
+                      failed: 0
+                      target: 50
+                total: 1300
+                target_total: 1300
+  
+  500:
+    description: Error durante la descarga
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            message:
+              type: string
+              example: "Error descargando dataset: [detalle del error]"

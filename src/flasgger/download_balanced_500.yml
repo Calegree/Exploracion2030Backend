@@ -1,0 +1,72 @@
+Descarga dataset balanceado 500-500
+---
+tags:
+  - Dataset Management
+summary: Descarga dataset balanceado con 500 imágenes Morchella y 500 No-Morchella
+description: |
+  Purga el dataset existente y descarga un conjunto balanceado de imágenes desde iNaturalist:
+  
+  **Morchella (500 imágenes):**
+  - Morchella esculenta: 100
+  - Morchella tridentina: 100
+  - Morchella andinensis: 25
+  - Morchella aysenina: 6
+  - Morchella spp (sin ID específico): 269
+  
+  **No-Morchella (500 imágenes):**
+  - Gyromitra esculenta: 100
+  - Gyromitra antarctica: 80
+  - Helvella lacunosa: 70
+  - Helvella crispa: 70
+  - Verpa bohemica: 60
+  - Cortinarius: 40
+  - Laccaria: 40
+  - Clitocybe: 40
+
+responses:
+  200:
+    description: Dataset descargado exitosamente
+    schema:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Dataset balanceado 500-500 descargado"
+        statistics:
+          type: object
+          properties:
+            morchella:
+              type: object
+              properties:
+                downloaded:
+                  type: integer
+                  example: 498
+                failed:
+                  type: integer
+                  example: 2
+            no_morchella:
+              type: object
+              properties:
+                downloaded:
+                  type: integer
+                  example: 495
+                failed:
+                  type: integer
+                  example: 5
+            total:
+              type: integer
+              example: 993
+  500:
+    description: Error durante la descarga
+    schema:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Error descargando dataset: Connection timeout"

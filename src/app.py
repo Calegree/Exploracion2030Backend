@@ -52,6 +52,9 @@ app.config['SWAGGER'].setdefault('auth', {})
 from .resources.prediction import Prediction
 from .resources.download_fungis import DownloadImages
 from .resources.download_fungis_2 import DownloadImages2
+from .resources.download_balanced_500 import DownloadBalanced500
+from .resources.download_balanced_600 import DownloadBalanced600
+from .resources.download_balanced_650 import DownloadBalanced650
 from .resources.upload import upload_api
 from .resources.mlflow_dashboard import dashboard_api
 
@@ -59,6 +62,9 @@ from .resources.mlflow_dashboard import dashboard_api
 api.add_resource(Prediction, '/predict')
 api.add_resource(DownloadImages, '/download/fungis')
 api.add_resource(DownloadImages2, '/download/fungis2')
+api.add_resource(DownloadBalanced500, '/download/balanced_500')
+api.add_resource(DownloadBalanced600, '/download/balanced_600')
+api.add_resource(DownloadBalanced650, '/download/balanced_650')
 
 # Blueprints (Flask)
 app.register_blueprint(upload_api)
@@ -102,7 +108,9 @@ try:
         '/mlflow/confusion_matrix/{run_id}': 'mlflow_confusion_matrix.yml',
         '/upload/active': 'upload_active.yml',
         '/upload/models': 'upload_models.yml',
-        '/download/fungis2': 'download_fungis_2.yml'
+        '/download/fungis2': 'download_fungis_2.yml',
+        '/download/balanced_500': 'download_balanced_500.yml',
+        '/download/balanced_600': 'download_balanced_600.yml'
     }
     template_paths = {}
     for p, fname in path_map.items():

@@ -150,6 +150,7 @@ class ModelCardMLflowLogger:
         recall = metrics.get('val_recall', 0)
         f1 = metrics.get('val_f1_score', 0)
         loss = metrics.get('val_loss', 0)
+        best_threshold = metrics.get('best_threshold', 0.5)
         
         qmd = f"""---
 title: "Model Card: {self.model_type}"
@@ -184,6 +185,7 @@ format:
 | **Recall** | {recall:.4f} ({recall*100:.2f}%) |
 | **F1-Score** | {f1:.4f} |
 | **Validation Loss** | {loss:.4f} |
+| **Best Threshold** | {best_threshold:.4f} |
 
 """
         
@@ -236,9 +238,12 @@ Imbalance ratio: {dataset_info['no_morchella']/max(dataset_info['morchella'], 1)
 | Epochs Trained | {params.get('epochs', 'N/A')} |
 | Learning Rate | {params.get('learning_rate', 'N/A')} |
 | Optimizer | Adam |
-| Loss Function | Binary Crossentropy |
+| Loss Function | {params.get('loss_function', 'Binary Crossentropy')} |
+| Focal Loss | {params.get('use_focal_loss', 'No')} |
+| Class Weight (Positive) | {params.get('class_weight_positive', 'N/A')} |
 | Early Stopping | Yes (patience=5) |
 | Data Augmentation | Yes |
+| Fine-Tuning | {params.get('fine_tune', 'No')} |
 
 ---
 
