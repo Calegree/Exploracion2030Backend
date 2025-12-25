@@ -78,6 +78,6 @@ services:
 
 volumes:
   exploracion2030_pgdata:
-    external: true
+    driver: local
   minio-data:
   mlflow-data:
