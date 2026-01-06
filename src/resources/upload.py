@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from flasgger import swag_from
 import os
 import json
+import mlflow
 
 from ..extensions import db
 from ..models import UploadedModel, ActiveModel
@@ -147,3 +148,144 @@ def active_model():
         })
     except Exception as e:
         return jsonify({'error': 'DB error', 'detail': str(e)}), 500
+
+@upload_api.route('/upload/model/<run_id>', methods=['POST'])
+@swag_from(os.path.join(YML_DIR, 'upload_model_from_mlflow.yml'))
+def activate_model_from_mlflow(run_id):
+    """
+    Activa un modelo directamente desde MLflow/MinIO usando el run_id.
+    El modelo se carga desde los artifacts guardados en MinIO.
+    """
+    try:
+        client = MlflowClient()
+        
+        # Verificar que el run existe
+        try:
+            run = client.get_run(run_id)
+        except Exception as e:
+            return jsonify({
+                'error': 'Run no encontrado',
+                'detail': str(e),
+                'run_id': run_id
+            }), 404
+        
+        # Obtener información del run
+        artifact_uri = run.info.artifact_uri
+        metrics = run.data.metrics
+        params = run.data.params
+        
+        # Obtener el nombre del modelo desde los parámetros o usar default
+        model_type = params.get('model_type', 'Unknown')
+        model_name = f"model_morchella_{model_type.lower()}.keras"
+        
+        # Construir la URI del modelo en MLflow
+        model_uri = f"runs:/{run_id}/model"
+        
+        # Verificar que el modelo existe en los artifacts
+        try:
+            artifacts = client.list_artifacts(run_id, path="model")
+            if not artifacts:
+                return jsonify({
+                    'error': 'No se encontró el modelo en los artifacts del run',
+                    'run_id': run_id,
+                    'artifact_uri': artifact_uri
+                }), 404
+            
+            # Buscar el archivo .keras
+            model_artifact = None
+            for artifact in artifacts:
+                if artifact.path.endswith('.keras') or artifact.path.endswith('.h5'):
+                    model_artifact = artifact
+                    model_name = os.path.basename(artifact.path)
+                    break
+            
+            if not model_artifact:
+                return jsonify({
+                    'error': 'No se encontró archivo .keras en los artifacts',
+                    'run_id': run_id,
+                    'artifacts': [a.path for a in artifacts]
+                }), 404
+                
+        except Exception as e:
+            return jsonify({
+                'error': 'Error al listar artifacts',
+                'detail': str(e),
+                'run_id': run_id
+            }), 500
+        
+        # Intentar cargar el modelo para verificar que es válido
+        try:
+            # Verificar que se puede acceder al modelo
+            test_model = mlflow.keras.load_model(model_uri)
+            model_input_shape = str(test_model.input_shape)
+            model_output_shape = str(test_model.output_shape)
+            del test_model  # Liberar memoria
+        except Exception as e:
+            return jsonify({
+                'error': 'Error al cargar el modelo desde MLflow',
+                'detail': str(e),
+                'run_id': run_id,
+                'model_uri': model_uri
+            }), 500
+        
+        # Obtener timestamp del run
+        uploaded_at = datetime.fromtimestamp(run.info.start_time / 1000.0) if run.info.start_time else datetime.utcnow()
+        
+        # Tamaño del artifact (si está disponible)
+        size = model_artifact.file_size if hasattr(model_artifact, 'file_size') else None
+        
+        # Registrar en UploadedModel si no existe
+        existing_upload = UploadedModel.query.filter_by(name=model_name).first()
+        if not existing_upload:
+            um = UploadedModel(
+                name=model_name,
+                path=model_uri,  # Guardar la URI de MLflow
+                size=size,
+                uploaded_at=uploaded_at
+            )
+            db.session.add(um)
+            db.session.flush()
+        
+        # Activar el modelo creando entrada en ActiveModel
+        am = ActiveModel(
+            run_id=run_id,
+            model_name=model_name,
+            local_path=None,  # No hay path local, se carga desde MLflow
+            size=size,
+            uploaded_at=uploaded_at
+        )
+        db.session.add(am)
+        db.session.commit()
+        
+        # Preparar respuesta con información completa
+        response = {
+            'status': 'success',
+            'message': f'Modelo {model_name} activado desde MLflow',
+            'model': {
+                'name': model_name,
+                'run_id': run_id,
+                'model_uri': model_uri,
+                'artifact_uri': artifact_uri,
+                'size': size,
+                'uploaded_at': uploaded_at.isoformat(),
+                'model_type': model_type,
+                'input_shape': model_input_shape,
+                'output_shape': model_output_shape
+            },
+            'metrics': {
+                key: float(value) for key, value in sorted(metrics.items()) 
+                if 'val' in key.lower() or key in ['accuracy', 'loss', 'precision', 'recall', 'f1_score']
+            },
+            'parameters': params
+        }
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Error al activar modelo desde MLflow")
+        return jsonify({
+            'error': 'Error al activar modelo desde MLflow',
+            'detail': str(e),
+            'run_id': run_id
+        }), 500

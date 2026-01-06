@@ -89,15 +89,204 @@ export MLFLOW_TRACKING_URI=http://127.0.0.1:5001
 
 
 ##Para entrenar un modelo
-docker compose exec -T api bash -lc "cd /app/src && python train_model.py"
 
-## o este
-docker-compose exec api python -u src/train_model.py
+### Opción 1: Script unificado (Recomendado)
+```bash
+# Entrenar con MobileNetV2 (ligero y rápido)
+docker-compose exec api python src/train.py --model mobilenet
+
+# Entrenar con EfficientNetB0 (mayor precisión)
+docker-compose exec api python src/train.py --model efficientnet
+
+# Entrenar ambos modelos y comparar
+docker-compose exec api python src/train.py --model both --compare
+```
+
+### Opción 2: Scripts individuales
+```bash
+# MobileNetV2
+docker-compose exec api python src/train_model_mobilenet.py
+
+# EfficientNetB0
+docker-compose exec api python src/train_model_efficientnet.py
+
+# Comparar resultados
+docker-compose exec api python src/compare_models.py
+```
+
+### Opción 3: Entrenamiento manual desde contenedor
+```bash
+docker compose exec -T api bash -lc "cd /app/src && python train_model_mobilenet.py"
+# o
+docker-compose exec api python -u src/train_model_efficientnet.py
+```
+
+📖 **Documentación completa:** Ver `src/README_TRAINING.md`
 
 
 pip install -r src/requirements-linux.txt
 
 pip install -r src/requirements.txt
+
+---
+
+## 📦 Dataset Download - Descarga de Datasets
+
+La API incluye endpoints para descargar datasets balanceados desde iNaturalist:
+
+### Endpoints Disponibles
+
+#### `/download/balanced_650` - **Recomendado para producción**
+Dataset balanceado 1300 imágenes (650 + 650) con alta diversidad:
+
+**Morchella (650 fotos):**
+- 25 Morchella andinensis
+- 6 Morchella aysenina  
+- 100 Morchella tridentina
+- 100 Morchella esculenta
+- 419 Morchella spp (sin ID específico)
+
+**No-Morchella (650 fotos) - 5 grupos diversos:**
+- **Ascomicetes** (330): Gyromitra, Helvella, Verpa
+- **Agaricales** (160): Amanita, Agaricus
+- **Boletus patagónicos** (90): Boletus, Suillus, Lactarius
+- **Políporos** (40): Trametes, Ganoderma, Fomes
+- **Gasteroides** (30): Lycoperdon, Calvatia, Phallus
+
+```bash
+# Descargar dataset completo (sobrescribe dataset actual)
+curl -X POST http://localhost:5000/download/balanced_650
+
+# Con docker-compose
+docker-compose exec api curl -X POST http://localhost:5000/download/balanced_650
+```
+
+#### Otros endpoints disponibles
+- `/download/balanced_600` - Dataset 1000 imágenes (600 + 400)
+- `/download/balanced_500` - Dataset 1000 imágenes (500 + 500)
+- `/download/fungis` - Dataset básico
+- `/download/fungis2` - Dataset alternativo
+
+⚠️ **IMPORTANTE:** Todos los endpoints de descarga sobrescriben la carpeta `src/dataset/`
+
+---
+
+## 🎯 Activación de Modelos - Model Activation
+
+### Activar Modelo desde MLflow/MinIO
+
+Después de entrenar un modelo, puedes activarlo directamente desde MLflow sin necesidad de descargarlo:
+
+```bash
+# Activar modelo usando el Run ID de MLflow
+curl -X POST http://localhost:5000/upload/model/{run_id}
+
+# Ejemplo con Run ID específico
+curl -X POST http://localhost:5000/upload/model/f8b433193fcd4f6c91c632f83423ec5d
+
+# Con docker-compose
+docker-compose exec api curl -X POST http://localhost:5000/upload/model/f8b433193fcd4f6c91c632f83423ec5d
+```
+
+**¿Cómo funciona?**
+1. Busca el run en MLflow usando el run_id
+2. Verifica que existan artifacts del modelo (.keras) en MinIO
+3. Valida que el modelo sea cargable
+4. Lo registra en la BD y activa para predicciones
+
+**Ventajas:**
+- ✅ No necesitas descargar el modelo localmente
+- ✅ Acceso directo al storage de MLflow/MinIO
+- ✅ Incluye validación automática
+- ✅ Retorna métricas y parámetros del entrenamiento
+
+### Ver Modelo Activo
+
+```bash
+# Ver qué modelo está actualmente activo
+curl http://localhost:5000/upload/active
+
+# Ejemplo de respuesta:
+# {
+#   "active_model": "model_morchella_efficientnet.keras",
+#   "run_id": "f8b433193fcd4f6c91c632f83423ec5d",
+#   "uploaded_at": "2025-12-16T03:45:00",
+#   "set_at": "2025-12-16T04:11:00"
+# }
+```
+
+### Métodos Alternativos de Activación
+
+#### Opción 1: Subir archivo de modelo
+```bash
+# Subir un archivo .keras/.h5 directamente
+curl -X POST -F "model=@model_morchella.keras" http://localhost:5000/upload/model
+```
+
+#### Opción 2: Activar modelo previamente subido
+```bash
+# Listar modelos disponibles
+curl http://localhost:5000/upload/models
+
+# Activar uno específico
+curl -X POST http://localhost:5000/upload/activate \
+  -H "Content-Type: application/json" \
+  -d '{"model": "model_morchella_efficientnet.keras"}'
+```
+
+---
+
+## 📋 Model Cards - Documentación Automática de Modelos
+
+Cada modelo entrenado genera automáticamente un **Model Card en Quarto** con:
+- Parámetros y arquitectura
+- Métricas (accuracy, precision, recall, F1-score)
+- Matriz de confusión y análisis de errores
+- Dataset information
+- Limitaciones y recomendaciones
+
+### 🚀 Uso Rápido
+
+```bash
+# 1. Entrenar un modelo (genera Model Card automáticamente)
+docker-compose exec api python src/train.py --model efficientnet
+
+# 2. Ver modelos disponibles
+python src/model_card_utils.py list
+
+# 3. Compilar a HTML profesional
+python src/model_card_utils.py compile-all
+
+# 4. Crear documento comparativo
+python src/model_card_utils.py compare
+
+# 5. Abrir en navegador
+python src/model_card_utils.py open model_cards/model_comparison.html
+```
+
+### 📚 Documentación Completa
+
+Ver [`model_cards/README.md`](model_cards/README.md) para:
+- Instalación de Quarto
+- Guía completa de uso
+- Ejemplos de workflows
+- Personalización
+- Troubleshooting
+
+### 📊 Estructura de Resultados
+
+```
+model_cards/
+├── model_card_EfficientNetB0_20251215_134500.qmd   ← Fuente (editable)
+├── model_card_EfficientNetB0_20251215_134500.html  ← HTML compilado
+├── model_card_MobileNetV2_20251215_141200.qmd
+├── model_card_MobileNetV2_20251215_141200.html
+├── model_comparison.qmd                              ← Comparativa
+├── model_comparison.html
+└── model-card-style.css                              ← Estilos
+```
+
+---
 
 
 

@@ -9,7 +9,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     gfortran \
     postgresql-client \
+    pandoc \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Instalar Quarto (versión precompilada)
+RUN wget https://github.com/quarto-dev/quarto-cli/releases/download/v1.4.550/quarto-1.4.550-linux-amd64.tar.gz && \
+    tar -xzf quarto-1.4.550-linux-amd64.tar.gz && \
+    mv quarto-1.4.550 /opt/quarto && \
+    rm quarto-1.4.550-linux-amd64.tar.gz && \
+    ln -s /opt/quarto/bin/quarto /usr/local/bin/quarto
 
 # Usar el requirements optimizado para la imagen Docker
 COPY requirements-docker.txt .
@@ -32,4 +41,4 @@ ENV GUNICORN_WORKERS=2
 ENV GUNICORN_TIMEOUT=1200
 
 ENTRYPOINT ["/usr/local/bin/wait-for-postgres.sh"]
-CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "120"]
+CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "1200", "--graceful-timeout", "1200"]

@@ -16,7 +16,7 @@ services:
     image: postgres:15
     volumes:
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
-      - pgdata:/var/lib/postgresql/data
+      - exploracion2030_pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: morchellappdb
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -79,6 +79,7 @@ services:
       - ./src/dataset:/app/src/dataset
 
 volumes:
-  pgdata:
+  exploracion2030_pgdata:
+    driver: local
   minio-data:
   mlflow-data:

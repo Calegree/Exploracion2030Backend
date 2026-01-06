@@ -144,53 +144,14 @@ class ModelCardMLflowLogger:
         timestamp = run_info['start_time'].strftime('%Y-%m-%d %H:%M:%S')
         duration = (run_info['end_time'] - run_info['start_time']).total_seconds() / 60 if run_info['end_time'] else 0
         
-        # Información de métricas (preferir métricas guardadas en MLflow)
+        # Información de métricas
         accuracy = metrics.get('val_accuracy', 0)
-        precision = metrics.get('val_precision', None)
-        recall = metrics.get('val_recall', None)
-        f1 = metrics.get('val_f1_score', None)
+        precision = metrics.get('val_precision', 0)
+        recall = metrics.get('val_recall', 0)
+        f1 = metrics.get('val_f1_score', 0)
         loss = metrics.get('val_loss', 0)
         best_threshold = metrics.get('best_threshold', 0.5)
-
-        # Si no hay precision/recall/f1 almacenadas, intentar calcularlas desde la
-        # matriz de confusión (cm_data es [[TN, FP], [FN, TP]] cuando existe)
-        try:
-            if (precision is None or recall is None or f1 is None) and cm_data and len(cm_data) >= 2:
-                tn, fp = cm_data[0][0], cm_data[0][1]
-                fn, tp = cm_data[1][0], cm_data[1][1]
-                # calcular precision/recall/f1 para la clase Morchella (TP)
-                precision_calc = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-                recall_calc = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-                f1_calc = (2 * precision_calc * recall_calc / (precision_calc + recall_calc)) if (precision_calc + recall_calc) > 0 else 0.0
-                # asignar valores sólo si estaban ausentes
-                if precision is None:
-                    precision = precision_calc
-                if recall is None:
-                    recall = recall_calc
-                if f1 is None:
-                    f1 = f1_calc
-        except Exception:
-            # no bloquear la generación de la model card por errores en el cálculo
-            pass
         
-        # Asegurar valores numéricos para formateo
-        try:
-            accuracy = float(accuracy or 0.0)
-        except Exception:
-            accuracy = 0.0
-        try:
-            precision = float(precision or 0.0)
-        except Exception:
-            precision = 0.0
-        try:
-            recall = float(recall or 0.0)
-        except Exception:
-            recall = 0.0
-        try:
-            f1 = float(f1 or 0.0)
-        except Exception:
-            f1 = 0.0
-
         qmd = f"""---
 title: "Model Card: {self.model_type}"
 subtitle: "Morchella Detection Classification Model"

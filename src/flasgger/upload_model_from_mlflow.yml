@@ -1,0 +1,169 @@
+Activar modelo desde MLflow/MinIO usando Run ID
+---
+tags:
+  - Model Upload & Activation
+summary: "Activa un modelo entrenado directamente desde MLflow/MinIO"
+description: |
+  Este endpoint activa un modelo previamente entrenado que está almacenado en MLflow/MinIO.
+  
+  **Funcionamiento:**
+  1. Busca el run especificado en MLflow
+  2. Verifica que existan artifacts del modelo (.keras) en MinIO
+  3. Carga el modelo para validar que sea accesible
+  4. Registra el modelo en la base de datos
+  5. Lo activa para que sea usado en predicciones (POST /predict)
+  
+  **Ventajas:**
+  - No necesitas descargar el modelo localmente
+  - Activa modelos directamente desde el storage de MLflow
+  - Incluye validación de que el modelo sea cargable
+  - Retorna métricas y parámetros del entrenamiento
+  
+  **Ejemplo de uso:**
+  ```bash
+  curl -X POST http://localhost:5000/upload/model/f8b433193fcd4f6c91c632f83423ec5d
+  ```
+
+parameters:
+  - name: run_id
+    in: path
+    type: string
+    required: true
+    description: "ID del run de MLflow que contiene el modelo a activar"
+    example: "f8b433193fcd4f6c91c632f83423ec5d"
+
+responses:
+  200:
+    description: Modelo activado exitosamente
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            message:
+              type: string
+              example: "Modelo model_morchella_efficientnet.keras activado desde MLflow"
+            model:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "model_morchella_efficientnet.keras"
+                run_id:
+                  type: string
+                  example: "f8b433193fcd4f6c91c632f83423ec5d"
+                model_uri:
+                  type: string
+                  example: "runs:/f8b433193fcd4f6c91c632f83423ec5d/model"
+                artifact_uri:
+                  type: string
+                  example: "s3://mlflow/1/f8b433193fcd4f6c91c632f83423ec5d/artifacts"
+                size:
+                  type: integer
+                  nullable: true
+                  example: 45432832
+                uploaded_at:
+                  type: string
+                  format: date-time
+                  example: "2025-12-16T03:45:00"
+                model_type:
+                  type: string
+                  example: "EfficientNetB0"
+                input_shape:
+                  type: string
+                  example: "(None, 224, 224, 3)"
+                output_shape:
+                  type: string
+                  example: "(None, 1)"
+            metrics:
+              type: object
+              additionalProperties:
+                type: number
+              example:
+                val_accuracy: 0.9269
+                val_loss: 0.2301
+                val_precision: 0.9237
+                val_recall: 0.9308
+            parameters:
+              type: object
+              additionalProperties:
+                type: string
+              example:
+                model_type: "EfficientNetB0"
+                batch_size: "32"
+                epochs: "25"
+        examples:
+          success:
+            value:
+              status: "success"
+              message: "Modelo model_morchella_efficientnet.keras activado desde MLflow"
+              model:
+                name: "model_morchella_efficientnet.keras"
+                run_id: "f8b433193fcd4f6c91c632f83423ec5d"
+                model_uri: "runs:/f8b433193fcd4f6c91c632f83423ec5d/model"
+                artifact_uri: "s3://mlflow/1/f8b433193fcd4f6c91c632f83423ec5d/artifacts"
+                size: 45432832
+                uploaded_at: "2025-12-16T03:45:00"
+                model_type: "EfficientNetB0"
+                input_shape: "(None, 224, 224, 3)"
+                output_shape: "(None, 1)"
+              metrics:
+                val_accuracy: 0.9269
+                val_loss: 0.2301
+                val_precision: 0.9237
+                val_recall: 0.9308
+                f1_score: 0.9272
+              parameters:
+                model_type: "EfficientNetB0"
+                batch_size: "32"
+                epochs: "25"
+                learning_rate: "0.001"
+  
+  404:
+    description: Run no encontrado o sin artifacts de modelo
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            detail:
+              type: string
+            run_id:
+              type: string
+        examples:
+          run_not_found:
+            value:
+              error: "Run no encontrado"
+              detail: "No run with id 'invalid_run_id' found"
+              run_id: "invalid_run_id"
+          no_model_artifact:
+            value:
+              error: "No se encontró archivo .keras en los artifacts"
+              run_id: "f8b433193fcd4f6c91c632f83423ec5d"
+              artifacts: ["confusion_matrix.json", "metrics.txt"]
+  
+  500:
+    description: Error al activar el modelo
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            detail:
+              type: string
+            run_id:
+              type: string
+        examples:
+          load_error:
+            value:
+              error: "Error al cargar el modelo desde MLflow"
+              detail: "Connection timeout to MinIO"
+              run_id: "f8b433193fcd4f6c91c632f83423ec5d"
+              model_uri: "runs:/f8b433193fcd4f6c91c632f83423ec5d/model"

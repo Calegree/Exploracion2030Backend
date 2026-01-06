@@ -1,0 +1,92 @@
+Descargar dataset balanceado de hongos desde iNaturalist
+---
+tags:
+  - Dataset Management
+summary: Descarga 400 fotos de Morchella y 650 de NO-Morchella distribuidas en 70+ especies
+description: |
+  Este endpoint descarga automáticamente un dataset balanceado de imágenes de hongos:
+  
+  **Morchella (400 fotos totales):**
+  - 25 fotos de Morchella andinensis
+  - 6 fotos de Morchella aysenina
+  - 100 fotos de Morchella tridentina
+  - 100 fotos de Morchella esculenta
+  - 169 fotos de Morchella spp (sin ID específico)
+  
+  **NO-Morchella (650 fotos totales):**
+  Distribuidas equitativamente entre 70 especies de hongos de Chile y Patagonia, incluyendo:
+  - Ascomicetes (Gyromitra, Helvella, etc.)
+  - Agaricales comunes (Amanita, Agaricus, etc.)
+  - Hongos de bosque patagónico (Boletus, Suillus, etc.)
+  - Políporos y hongos de madera
+  - Gasteroides y otras formas
+  
+  Las imágenes se descargan en paralelo (hasta 8 simultáneas) con gestión de errores y timeouts.
+  El proceso puede tardar varios minutos dependiendo de la disponibilidad de iNaturalist.
+
+responses:
+  200:
+    description: Descarga completada exitosamente
+    schema:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Descarga completada"
+        tiempo_segundos:
+          type: number
+          example: 245.67
+        total_exitosas:
+          type: integer
+          example: 982
+        total_fallidas:
+          type: integer
+          example: 68
+        tasa_exito:
+          type: number
+          example: 93.52
+        morchella_target:
+          type: integer
+          example: 400
+        no_morchella_target:
+          type: integer
+          example: 650
+        detalle:
+          type: array
+          items:
+            type: object
+            properties:
+              especie:
+                type: string
+                example: "Morchella andinensis"
+              categoria:
+                type: string
+                example: "morchella"
+              solicitadas:
+                type: integer
+                example: 25
+              encontradas:
+                type: integer
+                example: 25
+              exitosas:
+                type: integer
+                example: 24
+              fallidas:
+                type: integer
+                example: 1
+  500:
+    description: Error en el proceso de descarga
+    schema:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error en el proceso de descarga"
+        detalle:
+          type: string
+        tiempo_segundos:
+          type: number
+        total_exitosas:
+          type: integer
+        total_fallidas:
+          type: integer
