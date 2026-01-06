@@ -15,12 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements-docker.txt .
 RUN pip install --no-cache-dir -r requirements-docker.txt
 
-<<<<<<< Updated upstream
 # Copiar script de espera ANTES de copiar todo el proyecto
-=======
-
-# Copiar script de espera (entrypoint)
->>>>>>> Stashed changes
 COPY docker/wait-for-postgres.sh /usr/local/bin/wait-for-postgres.sh
 RUN sed -i 's/\r$//' /usr/local/bin/wait-for-postgres.sh && chmod +x /usr/local/bin/wait-for-postgres.sh
 
@@ -37,9 +32,4 @@ ENV GUNICORN_WORKERS=2
 ENV GUNICORN_TIMEOUT=1200
 
 ENTRYPOINT ["/usr/local/bin/wait-for-postgres.sh"]
-<<<<<<< Updated upstream
 CMD ["gunicorn", "src.app:app", "--bind", "0.0.0.0:5000", "--workers", "3", "--timeout", "120"]
-=======
-# Usar variables de entorno para mayor flexibilidad
-CMD ["sh", "-c", "gunicorn src.app:app --bind ${GUNICORN_BIND} --workers ${GUNICORN_WORKERS} --timeout ${GUNICORN_TIMEOUT} --graceful-timeout ${GUNICORN_TIMEOUT}"]
->>>>>>> Stashed changes
