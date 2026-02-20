@@ -50,9 +50,13 @@ def upload_model():
         db.session.rollback()
         return jsonify({'error': 'DB error al guardar metadata', 'detail': str(e)}), 500
 
-    # Intentar crear un run en MLflow y subir el archivo como artifact.
+    # Intentar crear un run en MLflow y subir el modelo correctamente
     run_id = None
     try:
+        # Cargar el modelo para verificarlo y subirlo correctamente
+        import tensorflow as tf
+        model = tf.keras.models.load_model(dest)
+        
         client = MlflowClient()
         exp_name = current_app.config.get('MLFLOW_EXPERIMENT', 'default')
         exp = client.get_experiment_by_name(exp_name)
@@ -61,33 +65,33 @@ def upload_model():
         else:
             exp_id = exp.experiment_id
 
-        run = client.create_run(exp_id)
-        run_id = run.info.run_id
+        # Iniciar el run
+        with mlflow.start_run(experiment_id=exp_id) as run:
+            run_id = run.info.run_id
+            
+            # Guardar el modelo correctamente con MLflow
+            mlflow.keras.log_model(model, "model")
+            
+            # Log de parámetros básicos
+            mlflow.log_param("model_name", filename)
+            mlflow.log_param("model_type", "keras")
+            
+            # Intentar subir matriz de confusión si existe
+            try:
+                conf_json = os.path.join(BASE_DIR, 'model', 'confusion_matrix.json')
+                conf_png = os.path.join(BASE_DIR, 'model', 'confusion_matrix.png')
+                if os.path.exists(conf_json):
+                    mlflow.log_artifact(conf_json)
+                if os.path.exists(conf_png):
+                    mlflow.log_artifact(conf_png)
+            except Exception as e:
+                current_app.logger.warning("mlflow: no se pudo subir artifact de confusion matrix: %s", e)
 
-        # Log del artifact (archivo único)
-        client.log_artifact(run_id, dest)
-
-        # Intentar subir matriz de confusión si existe en el repo (para que
-        # el endpoint /mlflow/confusion_matrix pueda devolverla)
-        try:
-            conf_json = os.path.join(BASE_DIR, 'model', 'confusion_matrix.json')
-            conf_png = os.path.join(BASE_DIR, 'model', 'confusion_matrix.png')
-            if os.path.exists(conf_json):
-                client.log_artifact(run_id, conf_json)
-            if os.path.exists(conf_png):
-                client.log_artifact(run_id, conf_png)
-        except Exception as e:
-            # no fatal, solo loggear
-            current_app.logger.warning("mlflow: no se pudo subir artifact de confusion matrix: %s", e)
-
-        # Marcar run como terminado
-        client.set_terminated(run_id)
     except Exception as e:
-        # registrar la excepción completa para ver el stacktrace en logs
-        current_app.logger.exception("mlflow: no se pudo subir artifact/crear run")
+        current_app.logger.exception("mlflow: no se pudo subir modelo")
         run_id = None
 
-    # Activar automáticamente el modelo subido: crear entrada ActiveModel (histórico)
+    # Activar automáticamente el modelo subido
     try:
         am = ActiveModel(run_id=run_id, model_name=filename, local_path=dest, size=size, uploaded_at=uploaded_at)
         db.session.add(am)

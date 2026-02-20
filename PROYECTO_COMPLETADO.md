@@ -16,12 +16,11 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│  SISTEMA AUTOMÁTICO DE MODEL CARDS         │
-│                                            │
+│  SISTEMA AUTOMÁTICO DE MODEL CARDS          │
+│                                             │
 │  ✅ Generación automática                   │
-│  ✅ 3 formatos (QMD, HTML, PDF)             │
-│  ✅ MLflow + MinIO integration              │
-│  ✅ 11 documentos completos                 │
+│  ✅ 2 formatos (HTML, PDF)                  │
+│  ✅ Integración MLflow + MinIO              │
 │  ✅ Cero pasos manuales                     │
 │  ✅ Listo para producción                   │
 └─────────────────────────────────────────────┘
