@@ -5,15 +5,15 @@
 - **MLflow UI:** http://localhost:5001
 - **MinIO Console (S3):** http://localhost:9001
 
-## 🍄 Hongos reconocidos (según endpoints de descarga)
-Esta lista corresponde a los hongos usados en los datasets descargables (ver en Flasgger):
+## 🍄 Hongos reconocidos (Dependen del endpoint de descarga de imágenes seleccionado)
+Esta lista de hongos usados en los datasets descargables (ver en Flasgger):
 
 **Morchella (positivos):**
 - Morchella andinensis
 - Morchella aysenina
 - Morchella tridentina
 - Morchella esculenta
-- Morchella spp (sin ID específico)
+- Morchella spp (sin familia específica)
 
 **No-Morchella (negativos):**
 - Ascomicetes: Gyromitra, Helvella, Verpa
